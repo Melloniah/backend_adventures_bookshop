@@ -4,9 +4,11 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import User, Product, Order, Category
-from schemas import ProductCreate, ProductUpdate, Product as ProductSchema
+from schemas import ProductCreate, ProductUpdate, Product as ProductSchema, Order as OrderSchema
 from routers.auth import get_current_active_user
 import os
+from utils.auth import get_current_admin
+
 
 router = APIRouter()
 
@@ -14,6 +16,14 @@ def require_admin(current_user: User = Depends(get_current_active_user)):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
     return current_user
+
+@router.get("/orders", response_model=List[OrderSchema])
+def get_all_orders(
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_current_admin)
+):
+    orders = db.query(Order).order_by(Order.created_at.desc()).all()
+    return orders
 
 @router.get("/dashboard")
 def get_dashboard_stats(

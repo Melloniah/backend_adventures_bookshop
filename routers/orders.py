@@ -1,5 +1,5 @@
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
@@ -25,7 +25,7 @@ def create_order(
     order_items = []
     
     for item in order.items:
-        product = db.query(Product).filter(Product.id == item.product_id).first()
+        product = db.Query(Product).filter(Product.id == item.product_id).first()
         if not product:
             raise HTTPException(status_code=404, detail=f"Product {item.product_id} not found")
         
@@ -91,3 +91,20 @@ def get_order(order_id: int, db: Session = Depends(get_db)):
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
     return order
+
+# Track an order (open, by email + order_id)
+@router.get("/track", response_model=OrderSchema)
+def track_order(
+    email: str = Query(..., description="Customer email used when placing order"),
+    order_id: int = Query(..., description="Order ID to track"),
+    db: Session = Depends(get_db),
+):
+    order = db.Query(OrderModel).filter(
+        OrderModel.id == order_id,
+        OrderModel.customer_email == email
+    ).first()
+
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found for this email")
+
+    return order    
