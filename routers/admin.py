@@ -86,3 +86,28 @@ def delete_product(
     db_product.is_active = False
     db.commit()
     return {"message": "Product deleted successfully"}
+
+
+@router.post("/upload-image")
+async def upload_image(
+    file: UploadFile = File(...),
+    admin_user: User = Depends(require_admin)
+):
+    if not file.content_type.startswith('image/'):
+        raise HTTPException(status_code=400, detail="File must be an image")
+    
+    # Create upload directory if it doesn't exist
+    os.makedirs("static/images", exist_ok=True)
+    
+    # Generate unique filename
+    file_extension = os.path.splitext(file.filename)[1]
+    filename = f"{uuid.uuid4()}{file_extension}"
+    file_path = f"static/images/{filename}"
+    
+    # Save file
+    with open(file_path, "wb") as buffer:
+        content = await file.read()
+        buffer.write(content)
+    
+    # Return URL with proper path
+    return {"filename": filename, "url": f"/static/images/{filename}"}
