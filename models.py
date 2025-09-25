@@ -9,7 +9,7 @@ Defines all database tables using SQLAlchemy ORM:
 """
 
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Float, DateTime, Text, Enum
-from sqlalchemy.relationship import relationship
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
 import enum

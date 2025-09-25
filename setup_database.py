@@ -1,81 +1,37 @@
-"""
-Creates initial database data:
-- Admin user
-- Categories
-- Sample products
-Run this once after setting up the database
-"""
-
-from sqlalchemy.orm import Session
+from database import SessionLocal
+from models import User, Category, Product
 from passlib.context import CryptContext
-from database import SessionLocal, engine
-from models import Base, User, Category, Product
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-def create_tables():
-    """Create all database tables"""
-    Base.metadata.create_all(bind=engine)
-    print("✅ Database tables created successfully!")
-
-def create_admin_user():
-    """Create default admin user"""
+def seed_data():
     db = SessionLocal()
     try:
-        admin = db.query(User).filter(User.email == "admin@schoolmall.co.ke").first()
-        if not admin:
-            hashed_password = pwd_context.hash("admin123")
-            admin = User(
+        # admin user
+        if not db.query(User).filter_by(email="admin@schoolmall.co.ke").first():
+            db.add(User(
                 email="admin@schoolmall.co.ke",
                 full_name="Admin User",
                 phone="+254793488207",
-                hashed_password=hashed_password,
+                hashed_password=pwd_context.hash("admin123"),
                 role="admin"
-            )
-            db.add(admin)
-            db.commit()
-            print("✅ Admin user created!")
-            print("   Email: admin@schoolmall.co.ke")
-            print("   Password: admin123")
+            ))
+            print("✅ Admin user created")
         else:
-            print("ℹ️  Admin user already exists")
-    finally:
-        db.close()
+            print(" Admin user already exists")    
 
-def create_categories():
-    """Create default categories"""
-    db = SessionLocal()
-    try:
+        # categories
         categories = [
             {"name": "Books", "slug": "books", "description": "Educational books and textbooks"},
             {"name": "Stationery", "slug": "stationery", "description": "Pens, pencils, notebooks"},
             {"name": "Technology", "slug": "technology", "description": "Computers and tech accessories"},
-            {"name": "Art Supplies", "slug": "art-supplies", "description": "Art materials and craft supplies"},
-            {"name": "Pre-school", "slug": "pre-school", "description": "Early childhood materials"},
-            {"name": "Grade 1", "slug": "grade-1", "description": "Grade 1 materials"},
-            {"name": "Grade 2", "slug": "grade-2", "description": "Grade 2 materials"},
-            {"name": "Grade 3", "slug": "grade-3", "description": "Grade 3 materials"},
         ]
-        
-        for cat_data in categories:
-            existing = db.query(Category).filter(Category.slug == cat_data["slug"]).first()
-            if not existing:
-                category = Category(**cat_data)
-                db.add(category)
-        
-        db.commit()
-        print("✅ Categories created successfully!")
-    finally:
-        db.close()
+        for cat in categories:
+            if not db.query(Category).filter_by(slug=cat["slug"]).first():
+                db.add(Category(**cat))
+        print("✅ Categories seeded")
 
-def create_sample_products():
-    """Create sample products"""
-    db = SessionLocal()
-    try:
-        books_cat = db.query(Category).filter(Category.slug == "books").first()
-        stationery_cat = db.query(Category).filter(Category.slug == "stationery").first()
-        tech_cat = db.query(Category).filter(Category.slug == "technology").first()
-        
+        # products
         products = [
             {
                 "name": "TRS Guide Top Scholar Mathematics 7",
@@ -84,49 +40,94 @@ def create_sample_products():
                 "price": 525.00,
                 "original_price": 550.00,
                 "stock_quantity": 50,
-                "category_id": books_cat.id if books_cat else None,
+                "category_slug": "books",
                 "is_featured": True,
-                "on_sale": True
+                "on_sale": True,
+                "image": "/maths7.jpg"
             },
             {
-                "name": "Crayola Crayon NO.24",
-                "slug": "crayola-crayon-24",
-                "description": "Pack of 24 vibrant colored crayons",
-                "price": 700.00,
-                "original_price": 720.00,
+                "name": "KCPE English Made Easy",
+                "slug": "kcpe-english-easy",
+                "description": "A step-by-step guide to mastering KCPE English",
+                "price": 400.00,
+                "original_price": 450.00,
+                "stock_quantity": 30,
+                "category_slug": "books",
+                "is_featured": False,
+                "on_sale": False,
+                "image": "/english.jpg"
+            },
+            {
+                "name": "A4 Exercise Book (96 Pages)",
+                "slug": "exercise-book-96",
+                "description": "High quality A4 exercise book with 96 pages",
+                "price": 55.00,
+                "original_price": 60.00,
+                "stock_quantity": 200,
+                "category_slug": "stationery",
+                "is_featured": False,
+                "on_sale": True,
+                "image": "/exercise-book.jpg"
+            },
+            {
+                "name": "Blue Ballpoint Pen (Pack of 10)",
+                "slug": "blue-pen-pack-10",
+                "description": "Durable blue pens, smooth writing experience",
+                "price": 150.00,
+                "original_price": 180.00,
                 "stock_quantity": 100,
-                "category_id": stationery_cat.id if stationery_cat else None,
-                "on_sale": True
+                "category_slug": "stationery",
+                "is_featured": False,
+                "on_sale": False,
+                "image": "/blue-pen.jpg"
             },
             {
-                "name": "HP EliteBook Laptop",
-                "slug": "hp-elitebook",
-                "description": "Professional laptop for students",
-                "price": 45000.00,
-                "stock_quantity": 10,
-                "category_id": tech_cat.id if tech_cat else None,
-                "is_featured": True
-            }
+                "name": "Scientific Calculator Casio fx-991EX",
+                "slug": "casio-fx-991ex",
+                "description": "Advanced scientific calculator, perfect for high school & college",
+                "price": 2950.00,
+                "original_price": 3100.00,
+                "stock_quantity": 15,
+                "category_slug": "technology",
+                "is_featured": True,
+                "on_sale": True,
+                "image": "/casio.jpg"
+            },
+            {
+                "name": "HP 250 G8 Laptop (Core i5, 8GB RAM, 256GB SSD)",
+                "slug": "hp-250-g8",
+                "description": "Reliable and affordable laptop for students & professionals",
+                "price": 61500.00,
+                "original_price": 65000.00,
+                "stock_quantity": 5,
+                "category_slug": "technology",
+                "is_featured": True,
+                "on_sale": False,
+                "image": "/hp-250.jpg"
+            },
         ]
-        
-        for prod_data in products:
-            existing = db.query(Product).filter(Product.slug == prod_data["slug"]).first()
-            if not existing:
-                product = Product(**prod_data)
-                db.add(product)
-        
+
+        for prod in products:
+            if not db.query(Product).filter_by(slug=prod["slug"]).first():
+                category = db.query(Category).filter_by(slug=prod["category_slug"]).first()
+                if category:
+                    db.add(Product(
+                        name=prod["name"],
+                        slug=prod["slug"],
+                        description=prod["description"],
+                        price=prod["price"],
+                        original_price=prod["original_price"],
+                        stock_quantity=prod["stock_quantity"],
+                        category_id=category.id,
+                        is_featured=prod["is_featured"],
+                        on_sale=prod["on_sale"],
+                        image=prod["image"]
+                    ))
+        print("✅ Products seeded")
+
         db.commit()
-        print("✅ Sample products created!")
     finally:
         db.close()
 
-def main():
-    print("🚀 Setting up SchoolMall database...")
-    create_tables()
-    create_admin_user()
-    create_categories()
-    create_sample_products()
-    print("\n🎉 Database setup complete!")
-
 if __name__ == "__main__":
-    main()
+    seed_data()

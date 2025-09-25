@@ -17,7 +17,7 @@ from routers import products, orders, auth, admin, payments
 # Create database tables
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="SchoolMall API")
+app = FastAPI(title="Zeus technologie API")
 
 # CORS for frontend
 app.add_middleware(

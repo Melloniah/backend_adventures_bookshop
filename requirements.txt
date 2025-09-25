@@ -10,7 +10,7 @@ python-multipart==0.0.6   # File uploads
 python-jose[cryptography]==3.3.0  # JWT tokens
 passlib[bcrypt]==1.7.4     # Password hashing
 python-decouple==3.8       # Environment variables
-psycopg2-binary==2.9.7     # PostgreSQL adapter
+psycopg2-binary==2.9.9     # PostgreSQL adapter
 pillow==10.1.0             # Image processing
 aiofiles==23.2.0           # Async file operations
 httpx==0.25.2              # HTTP client

@@ -78,6 +78,20 @@ class Product(BaseModel):
     class Config:
         from_attributes = True
 
+class ProductUpdate(BaseModel):
+    name: Optional[str] = None
+    slug: Optional[str] = None
+    description: Optional[str] = None
+    price: Optional[float] = None
+    original_price: Optional[float] = None
+    stock_quantity: Optional[int] = None
+    category_id: Optional[int] = None
+    image: Optional[str] = None
+    is_featured: Optional[bool] = None
+    on_sale: Optional[bool] = None
+    is_active: Optional[bool] = None
+        
+
 class OrderItemCreate(BaseModel):
     product_id: int
     quantity: int
