@@ -63,7 +63,7 @@ class Product(Base):
     description = Column(Text, nullable=True)
     price = Column(Float, nullable=False)
     original_price = Column(Float, nullable=True)
-    stock_quantity = Column(Integer, default=0)
+    stock_quantity = Column(Integer, default=0) 
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
     image = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
