@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+from fastapi.responses import JSONResponse  # ADD THIS IMPORT
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
@@ -61,8 +62,8 @@ async def get_current_admin_user(current_user: User = Depends(get_current_user))
         raise HTTPException(status_code=403, detail="Not authorized as admin")
     return current_user
 
-# Admin login only
-@router.post("/login", response_model=Token)
+# Admin login only - REMOVED response_model since we're returning JSONResponse
+@router.post("/login")
 def login_admin(user_login: UserLogin, db: Session = Depends(get_db)):
     user = authenticate_user(db, user_login.email, user_login.password)
     if not user:
@@ -74,8 +75,30 @@ def login_admin(user_login: UserLogin, db: Session = Depends(get_db)):
     access_token = create_access_token(
         data={"sub": user.email}, expires_delta=access_token_expires
     )
-    return {
-        "access_token": access_token,
-        "token_type": "bearer",
-        "user": UserSchema.from_orm(user)
+
+    # Convert user to dict for JSON serialization
+    user_dict = {
+        "id": user.id,
+        "email": user.email,
+        "role": user.role,
+        # Add other user fields as needed
     }
+
+    response = JSONResponse(
+        content={
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": user_dict,
+        }
+    )
+    
+    # Set HttpOnly cookie with proper settings
+    response.set_cookie(
+        key="token",
+        value=access_token,
+        httponly=True,
+        samesite="lax",
+        secure=False,  # Set True in production with HTTPS
+        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60  # Convert to seconds
+    )
+    return response
