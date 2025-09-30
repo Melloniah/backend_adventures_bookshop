@@ -18,7 +18,7 @@ def seed_data():
             ))
             print("✅ Admin user created")
         else:
-            print(" Admin user already exists")    
+            print("ℹ️ Admin user already exists")    
 
         # categories
         categories = [
@@ -31,7 +31,7 @@ def seed_data():
                 db.add(Category(**cat))
         print("✅ Categories seeded")
 
-        # products
+        # products - WITHOUT images (admin will add them)
         products = [
             {
                 "name": "TRS Guide Top Scholar Mathematics 7",
@@ -43,7 +43,7 @@ def seed_data():
                 "category_slug": "books",
                 "is_featured": True,
                 "on_sale": True,
-                "image": "/maths7.jpg"
+                "image": None  # Admin will add image
             },
             {
                 "name": "KCPE English Made Easy",
@@ -55,7 +55,7 @@ def seed_data():
                 "category_slug": "books",
                 "is_featured": False,
                 "on_sale": False,
-                "image": "/english.jpg"
+                "image": None
             },
             {
                 "name": "A4 Exercise Book (96 Pages)",
@@ -67,7 +67,7 @@ def seed_data():
                 "category_slug": "stationery",
                 "is_featured": False,
                 "on_sale": True,
-                "image": "/exercise-book.jpg"
+                "image": None
             },
             {
                 "name": "Blue Ballpoint Pen (Pack of 10)",
@@ -79,7 +79,7 @@ def seed_data():
                 "category_slug": "stationery",
                 "is_featured": False,
                 "on_sale": False,
-                "image": "/blue-pen.jpg"
+                "image": None
             },
             {
                 "name": "Scientific Calculator Casio fx-991EX",
@@ -91,7 +91,7 @@ def seed_data():
                 "category_slug": "technology",
                 "is_featured": True,
                 "on_sale": True,
-                "image": "/casio.jpg"
+                "image": None
             },
             {
                 "name": "HP 250 G8 Laptop (Core i5, 8GB RAM, 256GB SSD)",
@@ -103,7 +103,7 @@ def seed_data():
                 "category_slug": "technology",
                 "is_featured": True,
                 "on_sale": False,
-                "image": "/hp-250.jpg"
+                "image": None
             },
         ]
 
@@ -123,7 +123,7 @@ def seed_data():
                         on_sale=prod["on_sale"],
                         image=prod["image"]
                     ))
-        print("✅ Products seeded")
+        print(" Products seeded")
 
         db.commit()
     finally:

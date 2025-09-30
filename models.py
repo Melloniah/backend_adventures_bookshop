@@ -115,3 +115,17 @@ class Payment(Base):
     provider_response = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     order = relationship("Order", back_populates="payments")
+
+
+    #For admin to be able to change Hero banner
+
+class HeroBanner(Base):
+    __tablename__ = "hero_banners"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False)
+    subtitle = Column(String, nullable=True)
+    description = Column(String, nullable=True)
+    image = Column(String, nullable=False)  # store /static/images/filename
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+ 
