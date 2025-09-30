@@ -7,6 +7,7 @@ from database import get_db
 from models import User, Product, Order, HeroBanner
 from schemas import ProductCreate, ProductUpdate, Product as ProductSchema, Order as OrderSchema
 from routers.auth import get_current_admin_user
+from utils.delete_file import delete_file_if_exists 
 
 
 
@@ -63,31 +64,42 @@ def create_product(product: ProductCreate, db: Session = Depends(get_db), admin_
     db.refresh(db_product)
     return db_product
 
-@router.put("/products/{product_id}", response_model=ProductSchema)
-def update_product(product_id: int, product_update: ProductUpdate, db: Session = Depends(get_db), admin_user: User = Depends(get_current_admin_user)):
-    db_product = db.query(Product).filter(Product.id == product_id).first()
-    if not db_product:
+
+# UPDATE product
+@router.put("/products/{product_id}")
+async def update_product(product_id: int, payload: ProductUpdate, db: Session = Depends(get_db)):
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
-    # If updating slug, check uniqueness
-    if product_update.slug and product_update.slug != db_product.slug:
-        if db.query(Product).filter(Product.slug == product_update.slug).first():
-            raise HTTPException(status_code=400, detail="Slug already exists")
+    old_image = product.image  # save old image
 
-    for field, value in product_update.dict(exclude_unset=True).items():
-        setattr(db_product, field, value)
+    # update fields from payload
+    for key, value in payload.dict(exclude_unset=True).items():
+        setattr(product, key, value)
+
     db.commit()
-    db.refresh(db_product)
-    return db_product
+    db.refresh(product)
 
+    # delete old image if replaced
+    if payload.image and old_image and old_image != payload.image:
+        delete_file_if_exists(old_image)
+
+    return product
+
+# DELETE product
 @router.delete("/products/{product_id}")
-def delete_product(product_id: int, db: Session = Depends(get_db), admin_user: User = Depends(get_current_admin_user)):
-    db_product = db.query(Product).filter(Product.id == product_id).first()
-    if not db_product:
+def delete_product(product_id: int, db: Session = Depends(get_db)):
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
         raise HTTPException(status_code=404, detail="Product not found")
-    db.delete(db_product)  # ✅ Hard delete
+
+    # delete product image
+    delete_file_if_exists(product.image)
+
+    db.delete(product)
     db.commit()
-    return {"message": "Product deleted successfully"}
+    return {"detail": "Product deleted"}
 
 # ----------------------
 # Image Upload
@@ -110,6 +122,8 @@ async def upload_image(file: UploadFile = File(...), admin_user: User = Depends(
         raise HTTPException(status_code=500, detail=f"Failed to save image: {str(e)}")
 
     return {"filename": filename, "url": f"/static/images/{filename}"}
+
+
 
     #Admin to be able to add or delete hero banners
 @router.get("/hero-banners")
@@ -201,3 +215,5 @@ async def update_hero_banner(
     db.commit()
     db.refresh(banner)
     return banner
+
+

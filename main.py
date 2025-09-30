@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 
 from database import engine
 from models import Base
-from routers import products, orders, auth, admin, payments
+from routers import products, orders, auth, admin, payments, categories
 from routers.auth import get_current_admin_user
 
 # Create database tables
@@ -30,6 +30,7 @@ app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 app.include_router(products.router, prefix="/products", tags=["Products"])
 app.include_router(orders.router, prefix="/orders", tags=["Orders"])
 app.include_router(payments.router, prefix="/payments", tags=["Payments"])
+app.include_router(payments.router, prefix="/categories", tags=["Categories"])
 
 app.include_router(
     admin.router,
