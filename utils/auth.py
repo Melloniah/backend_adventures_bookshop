@@ -1,4 +1,3 @@
-# utils/auth.py
 from fastapi import Depends, HTTPException, status
 from routers.auth import get_current_active_user
 from models import User
