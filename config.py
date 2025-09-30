@@ -10,7 +10,7 @@ class Settings:
     DATABASE_URL: str = config("DATABASE_URL", default="postgresql://user:password@localhost/schoolmall")
     
     # Security
-    SECRET_KEY: str = config("SECRET_KEY", default="your-secret-key-change-this-in-production")
+    SECRET_KEY: str = config("JWT_SECRET", default="your-secret-key-change-this-in-production")
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
