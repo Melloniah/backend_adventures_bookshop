@@ -97,8 +97,19 @@ def login_admin(user_login: UserLogin, db: Session = Depends(get_db)):
         key="token",
         value=access_token,
         httponly=True,
-        samesite="lax",
+        samesite="Lax",
         secure=False,  # Set True in production with HTTPS
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60  # Convert to seconds
+    )
+    return response
+
+@router.post("/logout")
+def logout_admin():
+    response = JSONResponse(content={"detail": "Logged out successfully"})
+    response.delete_cookie(
+        key="token",
+        path="/",      # must match the path used when setting the cookie
+        samesite="Lax",
+        secure=False,  # True in production with HTTPS
     )
     return response
