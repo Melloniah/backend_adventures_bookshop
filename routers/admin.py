@@ -130,12 +130,19 @@ async def upload_image(file: UploadFile = File(...), admin_user: User = Depends(
 def get_banners(db: Session = Depends(get_db)):
     return db.query(HeroBanner).order_by(HeroBanner.created_at.desc()).all()
 
+@router.get("/hero-banners/{banner_id}")
+def get_banner_by_id(banner_id: int, db: Session = Depends(get_db)):
+    banner = db.query(HeroBanner).filter(HeroBanner.id == banner_id).first()
+    if not banner:
+        raise HTTPException(status_code=404, detail="Banner not found")
+    return banner
+
 
 @router.post("/hero-banners")
 async def create_banner(
-    title: str,
-    subtitle: str = None,
-    description: str = None,
+    title: str = Form(...),
+    subtitle: str = Form(None),
+    description: str = Form(None),
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     admin_user = Depends(get_current_admin_user)
@@ -156,64 +163,77 @@ async def create_banner(
         subtitle=subtitle,
         description=description,
         image=f"/static/images/{filename}"
+
     )
     db.add(banner)
     db.commit()
     db.refresh(banner)
     return banner
 
-@router.delete("/admin/hero-banners/{banner_id}")
-def delete_hero_banner(banner_id: int, db: Session = Depends(get_db)):
-    banner = db.query(HeroBanner).filter(HeroBanner.id == banner_id).first()
-    if not banner:
-        raise HTTPException(status_code=404, detail="Banner not found")
 
-    # Remove old image file
-    if banner.image:
-        # remove leading "/" if stored like "/static/images/file.jpg"
-        file_path = banner.image.lstrip("/")
-        if os.path.exists(file_path):
-            os.remove(file_path)
-
-    db.delete(banner)
-    db.commit()
-    return {"message": "Banner and image deleted successfully"}
-
-
-from fastapi import UploadFile, Form
-
-@router.put("/admin/hero-banners/{banner_id}")
-async def update_hero_banner(
+@router.delete("/hero-banners/{banner_id}")
+def delete_hero_banner(
     banner_id: int,
-    title: str = Form(...),
-    subtitle: str = Form(None),
-    description: str = Form(None),
-    image: UploadFile = None,
     db: Session = Depends(get_db),
+    admin_user: User = Depends(get_current_admin_user)  # ✅ protect with admin auth
 ):
     banner = db.query(HeroBanner).filter(HeroBanner.id == banner_id).first()
     if not banner:
         raise HTTPException(status_code=404, detail="Banner not found")
 
-    # Update fields
+    # delete old image file
+    if banner.image:
+        file_path = banner.image.lstrip("/")  # remove leading slash if present
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+    db.delete(banner)
+    db.commit()
+    return {"detail": "Banner deleted successfully"}
+
+
+@router.put("/hero-banners/{banner_id}")
+async def update_banner(
+    banner_id: int,
+    title: str = Form(...),
+    subtitle: str = Form(None),
+    description: str = Form(None),
+    file: UploadFile = File(None),   # <-- optional now
+    db: Session = Depends(get_db),
+    admin_user=Depends(get_current_admin_user)
+):
+    banner = db.query(HeroBanner).filter(HeroBanner.id == banner_id).first()
+    if not banner:
+        raise HTTPException(status_code=404, detail="Banner not found")
+
+    # Update text fields
     banner.title = title
     banner.subtitle = subtitle
     banner.description = description
 
-    # If new image is uploaded → delete old file and save new
-    if image:
-        if banner.image:
-            old_path = banner.image.lstrip("/")
-            if os.path.exists(old_path):
-                os.remove(old_path)
+    # If a new image was uploaded, replace the old one
+    if file:
+        if not file.content_type.startswith("image/"):
+            raise HTTPException(status_code=400, detail="File must be an image")
 
-        file_location = f"static/images/{image.filename}"
-        with open(file_location, "wb+") as f:
-            f.write(await image.read())
-        banner.image = f"/{file_location}"  # keep format /static/images/filename
+        # Delete old image file (optional but clean)
+        if banner.image and os.path.exists(banner.image.lstrip("/")):
+            os.remove(banner.image.lstrip("/"))
+
+        # Save new image
+        os.makedirs("static/images", exist_ok=True)
+        ext = os.path.splitext(file.filename)[1]
+        filename = f"{uuid.uuid4()}{ext}"
+        file_path = os.path.join("static/images", filename)
+
+        with open(file_path, "wb") as buffer:
+            buffer.write(await file.read())
+
+        banner.image = f"/static/images/{filename}"
 
     db.commit()
     db.refresh(banner)
     return banner
+
 
 
