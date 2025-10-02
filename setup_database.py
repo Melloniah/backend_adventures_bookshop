@@ -20,12 +20,23 @@ def seed_data():
         else:
             print("ℹ️ Admin user already exists")    
 
-        # categories
+       # Categories
         categories = [
-            {"name": "Books", "slug": "books", "description": "Educational books and textbooks"},
+            {"name": "Pre-school", "slug": "pre-school", "description": "Activities for pre-schoolers"},
+            {"name": "Grade 1", "slug": "grade-1", "description": "Grade 1 textbooks & stationery"},
+            {"name": "Grade 2", "slug": "grade-2", "description": "Grade 2 materials"},
+            {"name": "Grade 3", "slug": "grade-3", "description": "Grade 3 materials"},
+            {"name": "Art Supply", "slug": "arts", "description": "Everything to do with painting"},
             {"name": "Stationery", "slug": "stationery", "description": "Pens, pencils, notebooks"},
             {"name": "Technology", "slug": "technology", "description": "Computers and tech accessories"},
+            {"name": "Grade 4", "slug": "grade-4", "description": "Grade 4 textbooks & materials"},
+            {"name": "Grade 5", "slug": "grade-5", "description": "Grade 5 textbooks & materials"},
+            {"name": "Grade 6", "slug": "grade-6", "description": "Grade 6 textbooks & materials"},
+            {"name": "Grade 7", "slug": "grade-7", "description": "Grade 7 textbooks & materials"},
+            {"name": "Grade 8", "slug": "grade-8", "description": "Grade 8 textbooks & materials"},
+            {"name": "High School", "slug": "high-school", "description": "High school textbooks & stationery"}
         ]
+
         for cat in categories:
             if not db.query(Category).filter_by(slug=cat["slug"]).first():
                 db.add(Category(**cat))

@@ -75,8 +75,10 @@ class Product(BaseModel):
     on_sale: bool
     created_at: datetime
     category: Optional[Category] = None
+
     class Config:
-        from_attributes = True
+        orm_mode = True  # ✅ correct
+
 
 class ProductUpdate(BaseModel):
     name: Optional[str] = None
