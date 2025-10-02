@@ -6,12 +6,14 @@ from database import get_db
 from models import Product as ProductModel, Category
 from schemas import Product as ProductSchema
 
-router = APIRouter()
+router = APIRouter(
+    redirect_slashes=False  
+)
 
 # ----------------------------
 # Public: Get all active products
 # ----------------------------
-@router.get("/", response_model=List[ProductSchema])
+@router.get("", response_model=List[ProductSchema])
 def get_products(
     category: Optional[str] = Query(None, description="Category slug"),
     search: Optional[str] = Query(None, description="Search term"),

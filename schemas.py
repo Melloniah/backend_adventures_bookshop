@@ -1,12 +1,8 @@
-"""
-Pydantic models for API request/response validation
-Ensures data types and formats are correct
-"""
-
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 from datetime import datetime
 from models import UserRole, OrderStatus, PaymentStatus
+
 
 class UserCreate(BaseModel):
     email: EmailStr
@@ -14,9 +10,11 @@ class UserCreate(BaseModel):
     phone: Optional[str] = None
     password: str
 
+
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
 
 class User(BaseModel):
     id: int
@@ -26,18 +24,22 @@ class User(BaseModel):
     role: UserRole
     is_active: bool
     created_at: datetime
+
     class Config:
         from_attributes = True
+
 
 class Token(BaseModel):
     access_token: str
     token_type: str
     user: User
 
+
 class CategoryCreate(BaseModel):
     name: str
     slug: str
     description: Optional[str] = None
+
 
 class Category(BaseModel):
     id: int
@@ -46,8 +48,10 @@ class Category(BaseModel):
     description: Optional[str] = None
     is_active: bool
     created_at: datetime
+
     class Config:
         from_attributes = True
+
 
 class ProductCreate(BaseModel):
     name: str
@@ -60,6 +64,7 @@ class ProductCreate(BaseModel):
     image: Optional[str] = None
     is_featured: bool = False
     on_sale: bool = False
+
 
 class Product(BaseModel):
     id: int
@@ -92,20 +97,28 @@ class ProductUpdate(BaseModel):
     is_featured: Optional[bool] = None
     on_sale: Optional[bool] = None
     is_active: Optional[bool] = None
-        
+
+
+# -------------------------------
+# 🔄 Order Schemas (updated)
+# -------------------------------
+
 
 class OrderItemCreate(BaseModel):
     product_id: int
     quantity: int
+    price: float   # lock price from cart
+
 
 class OrderCreate(BaseModel):
     full_name: str
     email: EmailStr
     phone: str
-    address: str
-    city: str
+    location: str   # replaces address + city
     notes: Optional[str] = None
+    payment_method: str   # ✅ added ("mpesa" | "whatsapp")
     items: List[OrderItemCreate]
+
 
 class OrderItem(BaseModel):
     id: int
@@ -113,8 +126,10 @@ class OrderItem(BaseModel):
     quantity: int
     price: float
     product: Product
+
     class Config:
         from_attributes = True
+
 
 class Order(BaseModel):
     id: int
@@ -122,17 +137,33 @@ class Order(BaseModel):
     full_name: str
     email: EmailStr
     phone: str
-    address: str
-    city: str
+    location: str
     total_amount: float
     status: OrderStatus
     payment_status: PaymentStatus
     created_at: datetime
     order_items: List[OrderItem] = []
+
     class Config:
         from_attributes = True
+
+# -------------------------------
+# Admin Order Update Schema
+# -------------------------------
+
+class OrderStatusUpdate(BaseModel):
+    status: Optional[OrderStatus] = None        # e.g. pending, shipped, delivered
+    payment_status: Optional[PaymentStatus] = None  # e.g. pending, completed, refunded
+
+
+
+# -------------------------------
+# Payments
+# -------------------------------
 
 class PaymentCreate(BaseModel):
     order_id: int
     phone_number: str
     amount: float
+    method: str   # ✅ added ("mpesa" | "whatsapp")
+

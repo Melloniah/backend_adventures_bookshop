@@ -34,7 +34,7 @@ def seed_data():
             {"name": "Grade 6", "slug": "grade-6", "description": "Grade 6 textbooks & materials"},
             {"name": "Grade 7", "slug": "grade-7", "description": "Grade 7 textbooks & materials"},
             {"name": "Grade 8", "slug": "grade-8", "description": "Grade 8 textbooks & materials"},
-            {"name": "High School", "slug": "high-school", "description": "High school textbooks & stationery"}
+            {"name": "Junior High School", "slug": "junior high ", "description": "Junior high school textbooks & stationery"}
         ]
 
         for cat in categories:

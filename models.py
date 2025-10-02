@@ -32,6 +32,11 @@ class PaymentStatus(str, enum.Enum):
     failed = "failed"
     refunded = "refunded"
 
+class PaymentMethod(enum.Enum):
+    mpesa = "mpesa"
+    whatsapp = "whatsapp"
+
+
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
@@ -81,16 +86,23 @@ class Order(Base):
     email = Column(String, nullable=False)
     phone = Column(String, nullable=False)
     full_name = Column(String, nullable=False)
-    address = Column(Text, nullable=False)
-    city = Column(String, nullable=False)
+    location = Column(Text, nullable=False)  # replaces address + city
     total_amount = Column(Float, nullable=False)
+
     status = Column(Enum(OrderStatus), default=OrderStatus.pending)
+
+    # 👇 new field
+    payment_method = Column(Enum(PaymentMethod), default=PaymentMethod.mpesa)
     payment_status = Column(Enum(PaymentStatus), default=PaymentStatus.pending)
+
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
     user = relationship("User", back_populates="orders")
     order_items = relationship("OrderItem", back_populates="order", lazy="joined")
     payments = relationship("Payment", back_populates="order")
+
+
 
 class OrderItem(Base):
     __tablename__ = "order_items"
