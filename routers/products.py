@@ -1,32 +1,59 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 
 from database import get_db
-from models import Product as ProductModel
+from models import Product as ProductModel, Category
 from schemas import Product as ProductSchema
 
-router = APIRouter()
+router = APIRouter(
+    redirect_slashes=False  
+)
 
 # ----------------------------
 # Public: Get all active products
 # ----------------------------
-@router.get("/", response_model=List[ProductSchema])
-def list_products(db: Session = Depends(get_db)):
-    return db.query(ProductModel).filter(ProductModel.is_active == True).all()
+@router.get("", response_model=List[ProductSchema])
+def get_products(
+    category: Optional[str] = Query(None, description="Category slug"),
+    search: Optional[str] = Query(None, description="Search term"),
+    on_sale: Optional[bool] = Query(None, description="Filter products on sale"),
+    is_featured: Optional[bool] = Query(None, description="Filter featured products"),
+    db: Session = Depends(get_db)
+):
+    query = db.query(ProductModel).filter(ProductModel.is_active == True)
+
+    # Filter by category slug if provided
+    if category:
+        cat = db.query(Category).filter(Category.slug == category, Category.is_active == True).first()
+        if not cat:
+            raise HTTPException(status_code=404, detail="Category not found")
+        query = query.filter(ProductModel.category_id == cat.id)
+
+    # Filter by on_sale if provided
+    if on_sale is not None:
+        query = query.filter(ProductModel.on_sale == on_sale)
+    
+    # Filter by is_featured if provided
+    if is_featured is not None:
+        query = query.filter(ProductModel.is_featured == is_featured)
+
+    # Search functionality
+    if search:
+        query = query.filter(ProductModel.name.ilike(f"%{search}%"))
+
+    return query.all()
+
 
 # ----------------------------
 # Public: Get one active product by ID
 # ----------------------------
 @router.get("/{product_id}", response_model=ProductSchema)
 def get_product(product_id: int, db: Session = Depends(get_db)):
-    product = (
-        db.query(ProductModel)
-        .filter(ProductModel.id == product_id, ProductModel.is_active == True)
-        .first()
-    )
+    product = db.query(ProductModel).filter(
+        ProductModel.id == product_id,
+        ProductModel.is_active == True
+    ).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
     return product
-
-# UPDATE, POST AND DELETE IS FOR ADMIN

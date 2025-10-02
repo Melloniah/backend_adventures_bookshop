@@ -2,7 +2,7 @@
 import os
 from sqlalchemy.orm import Session
 from database import SessionLocal
-from models import HeroBanner, Products # adjust import path to your actual models
+from models import HeroBanner, Product
 
 def cleanup_orphans(model, image_field="image", image_dir="static/images"):
     db: Session = SessionLocal()
@@ -40,8 +40,8 @@ def cleanup_orphans(model, image_field="image", image_dir="static/images"):
     finally:
         db.close()
 
-    if __name__ == "__main__":
-    cleanup_orphans(Product)
+        if __name__ == "__main__":
+            cleanup_orphans(Product)
 
         # or be specific and write
 #         cleanup_orphans(Product, image_dir="static/images/products")

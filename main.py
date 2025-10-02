@@ -1,22 +1,23 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from database import engine
 from models import Base
-from routers import products, orders, auth, admin, payments, categories
-from routers.auth import get_current_admin_user
+from routers import (
+    products, orders, auth, payments, categories,
+    admin, admin_products, admin_orders, admin_banners, hero_banners
+)
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Zeus technologie API")
+app = FastAPI(title="Adventures Bookshop API", redirect_slashes=False)  # optional: disable auto-redirect
 
-# CORS middleware - add this FIRST
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],
-    #  allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -25,19 +26,19 @@ app.add_middleware(
 # Static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Include routers
+# Public routes
 app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 app.include_router(products.router, prefix="/products", tags=["Products"])
 app.include_router(orders.router, prefix="/orders", tags=["Orders"])
 app.include_router(payments.router, prefix="/payments", tags=["Payments"])
-app.include_router(payments.router, prefix="/categories", tags=["Categories"])
+app.include_router(categories.router, prefix="/categories", tags=["Categories"])
+app.include_router(hero_banners.router, prefix="/hero-banners", tags=["HeroBanners"])  # public
 
-app.include_router(
-    admin.router,
-    prefix="/admin",
-    tags=["Admin"],
-    # dependencies=[Depends(get_current_admin_user)]
-)
+# Admin routes
+app.include_router(admin.router, prefix="/admin", tags=["Admin"])
+app.include_router(admin_products.router, prefix="/admin/products", tags=["Admin Products"])
+app.include_router(admin_orders.router, prefix="/admin/orders", tags=["Admin Orders"])
+app.include_router(admin_banners.router, prefix="/admin/hero-banners", tags=["Admin Banners"])
 
 @app.get("/")
 async def root():

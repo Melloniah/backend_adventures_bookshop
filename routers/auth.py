@@ -14,7 +14,9 @@ from models import User
 from schemas import UserLogin, Token, User as UserSchema
 from config import settings
 
-router = APIRouter()
+router = APIRouter(
+    redirect_slashes=False  
+)
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
