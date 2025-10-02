@@ -15,6 +15,8 @@ router = APIRouter()
 def get_products(
     category: Optional[str] = Query(None, description="Category slug"),
     search: Optional[str] = Query(None, description="Search term"),
+    on_sale: Optional[bool] = Query(None, description="Filter products on sale"),
+    is_featured: Optional[bool] = Query(None, description="Filter featured products"),
     db: Session = Depends(get_db)
 ):
     query = db.query(ProductModel).filter(ProductModel.is_active == True)
@@ -25,6 +27,14 @@ def get_products(
         if not cat:
             raise HTTPException(status_code=404, detail="Category not found")
         query = query.filter(ProductModel.category_id == cat.id)
+
+    # Filter by on_sale if provided
+    if on_sale is not None:
+        query = query.filter(ProductModel.on_sale == on_sale)
+    
+    # Filter by is_featured if provided
+    if is_featured is not None:
+        query = query.filter(ProductModel.is_featured == is_featured)
 
     # Search functionality
     if search:

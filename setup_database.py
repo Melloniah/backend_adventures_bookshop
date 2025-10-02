@@ -65,7 +65,7 @@ def seed_data():
                 "stock_quantity": 30,
                 "category_slug": "books",
                 "is_featured": False,
-                "on_sale": False,
+                "on_sale": True,
                 "image": None
             },
             {
@@ -76,8 +76,8 @@ def seed_data():
                 "original_price": 60.00,
                 "stock_quantity": 200,
                 "category_slug": "stationery",
-                "is_featured": False,
-                "on_sale": True,
+                "is_featured": True,
+                "on_sale": False,
                 "image": None
             },
             {
@@ -112,8 +112,8 @@ def seed_data():
                 "original_price": 65000.00,
                 "stock_quantity": 5,
                 "category_slug": "technology",
-                "is_featured": True,
-                "on_sale": False,
+                "is_featured": False,
+                "on_sale": True,
                 "image": None
             },
         ]
