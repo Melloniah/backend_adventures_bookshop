@@ -13,6 +13,8 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
 import enum
+from datetime import datetime
+
 
 class UserRole(str, enum.Enum):
     admin = "admin"
@@ -101,6 +103,11 @@ class Order(Base):
     user = relationship("User", back_populates="orders")
     order_items = relationship("OrderItem", back_populates="order", lazy="joined")
     payments = relationship("Payment", back_populates="order")
+    status_logs = relationship("OrderStatusLog",back_populates="order",cascade="all, delete-orphan",
+    order_by="OrderStatusLog.changed_at",
+    lazy="joined"  
+)
+
 
 
 
@@ -112,8 +119,25 @@ class OrderItem(Base):
     quantity = Column(Integer, nullable=False)
     price = Column(Float, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
     order = relationship("Order", back_populates="order_items")
     product = relationship("Product", back_populates="order_items", lazy="joined")
+    
+
+
+class OrderStatusLog(Base):
+    __tablename__ = "order_status_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, ForeignKey("orders.id", ondelete="CASCADE"), nullable=False)
+    old_status = Column(String, nullable=False)
+    new_status = Column(String, nullable=False)
+    changed_at = Column(DateTime, default=datetime.utcnow)
+    changed_by_admin_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # optional if you have admin users
+
+    order = relationship("Order", back_populates="status_logs")
+
+   
 
 class Payment(Base):
     __tablename__ = "payments"

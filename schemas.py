@@ -4,6 +4,9 @@ from datetime import datetime
 from models import UserRole, OrderStatus, PaymentStatus
 
 
+# -------------------------------
+# User Schemas
+# -------------------------------
 class UserCreate(BaseModel):
     email: EmailStr
     full_name: str
@@ -26,7 +29,7 @@ class User(BaseModel):
     created_at: datetime
 
     class Config:
-        from_attributes = True
+        orm_mode = True
 
 
 class Token(BaseModel):
@@ -35,6 +38,9 @@ class Token(BaseModel):
     user: User
 
 
+# -------------------------------
+# Category & Product Schemas
+# -------------------------------
 class CategoryCreate(BaseModel):
     name: str
     slug: str
@@ -50,7 +56,7 @@ class Category(BaseModel):
     created_at: datetime
 
     class Config:
-        from_attributes = True
+        orm_mode = True
 
 
 class ProductCreate(BaseModel):
@@ -82,7 +88,7 @@ class Product(BaseModel):
     category: Optional[Category] = None
 
     class Config:
-        orm_mode = True  # ✅ correct
+        orm_mode = True
 
 
 class ProductUpdate(BaseModel):
@@ -100,23 +106,21 @@ class ProductUpdate(BaseModel):
 
 
 # -------------------------------
-# 🔄 Order Schemas (updated)
+# Order Schemas
 # -------------------------------
-
-
 class OrderItemCreate(BaseModel):
     product_id: int
     quantity: int
-    price: float   # lock price from cart
+    price: float  # lock price from cart
 
 
 class OrderCreate(BaseModel):
     full_name: str
     email: EmailStr
     phone: str
-    location: str   # replaces address + city
+    location: str
     notes: Optional[str] = None
-    payment_method: str   # ✅ added ("mpesa" | "whatsapp")
+    payment_method: str  # "mpesa" | "whatsapp"
     items: List[OrderItemCreate]
 
 
@@ -126,6 +130,15 @@ class OrderItem(BaseModel):
     quantity: int
     price: float
     product: Product
+
+    class Config:
+        orm_mode = True
+
+
+class OrderStatusLog(BaseModel):
+    old_status: OrderStatus
+    new_status: OrderStatus
+    changed_at: datetime
 
     class Config:
         from_attributes = True
@@ -143,27 +156,25 @@ class Order(BaseModel):
     payment_status: PaymentStatus
     created_at: datetime
     order_items: List[OrderItem] = []
+    status_history: Optional[List[OrderStatusLog]] = []  # ✅ Added for admin logs
 
     class Config:
-        from_attributes = True
+        orm_mode = True
+
 
 # -------------------------------
 # Admin Order Update Schema
 # -------------------------------
-
 class OrderStatusUpdate(BaseModel):
     status: Optional[OrderStatus] = None        # e.g. pending, shipped, delivered
     payment_status: Optional[PaymentStatus] = None  # e.g. pending, completed, refunded
 
 
-
 # -------------------------------
 # Payments
 # -------------------------------
-
 class PaymentCreate(BaseModel):
     order_id: int
     phone_number: str
     amount: float
-    method: str   # ✅ added ("mpesa" | "whatsapp")
-
+    method: str   # "mpesa" | "whatsapp"

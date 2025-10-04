@@ -3,43 +3,57 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import JSONResponse
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 from sqlalchemy.orm import Session
-import bcrypt
+import bcrypt  # ✅ Direct bcrypt - NO passlib
 
 from database import get_db
 from models import User
 from schemas import UserLogin
 from config import settings
 
-router = APIRouter(redirect_slashes=False)
+# Maximum password length for bcrypt
+BCRYPT_MAX_BYTES = 72
+DEFAULT_ROUNDS = 12
 
+
+def get_password_hash(password: str) -> str:
+    """Hash a password using bcrypt directly."""
+    password_bytes = password.encode('utf-8')
+    truncated_bytes = password_bytes[:BCRYPT_MAX_BYTES]
+    salt = bcrypt.gensalt(rounds=DEFAULT_ROUNDS)
+    hashed = bcrypt.hashpw(truncated_bytes, salt)
+    return hashed.decode('utf-8')
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a password against a bcrypt hash"""
-    return bcrypt.checkpw(
-        plain_password.encode('utf-8'), 
-        hashed_password.encode('utf-8')
-    )
+    """Verify a password against a bcrypt hash."""
+    try:
+        password_bytes = plain_password.encode('utf-8')
+        truncated_bytes = password_bytes[:BCRYPT_MAX_BYTES]
+        
+        if isinstance(hashed_password, str):
+            hashed_bytes = hashed_password.encode('utf-8')
+        else:
+            hashed_bytes = hashed_password
+        
+        return bcrypt.checkpw(truncated_bytes, hashed_bytes)
+    except Exception:
+        return False
 
-def get_password_hash(password: str) -> str:
-    """Hash a password using bcrypt"""
-    return bcrypt.hashpw(
-        password.encode('utf-8'), 
-        bcrypt.gensalt()
-    ).decode('utf-8')
 
+# ----- JWT TOKEN -----
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
-    """Always use configured expiry from settings unless explicitly overridden"""
     expires_delta = expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode = data.copy()
     expire = datetime.utcnow() + expires_delta
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
+
+# ----- USER HELPERS -----
 def get_user_by_email(db: Session, email: str):
     return db.query(User).filter(User.email == email).first()
+
 
 def authenticate_user(db: Session, email: str, password: str):
     user = get_user_by_email(db, email)
@@ -47,6 +61,8 @@ def authenticate_user(db: Session, email: str, password: str):
         return None
     return user
 
+
+# ----- DEPENDENCIES -----
 async def get_current_user(request: Request, db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -54,9 +70,7 @@ async def get_current_user(request: Request, db: Session = Depends(get_db)):
         headers={"WWW-Authenticate": "Bearer"},
     )
 
-    # Try cookie first
     token = request.cookies.get("token")
-    # Fallback: Authorization header
     if not token:
         auth_header = request.headers.get("authorization")
         if auth_header and auth_header.startswith("Bearer "):
@@ -78,22 +92,19 @@ async def get_current_user(request: Request, db: Session = Depends(get_db)):
         raise credentials_exception
     return user
 
+
 async def get_current_admin_user(current_user: User = Depends(get_current_user)):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized as admin")
     return current_user
 
+
+# ----- ROUTES -----
+router = APIRouter()
+
+
 @router.post("/login")
 def login_admin(user_login: UserLogin, db: Session = Depends(get_db)):
-    # ADD THIS DEBUG
-    print(f"\n{'='*50}")
-    print(f"LOGIN ATTEMPT")
-    print(f"Email received: '{user_login.email}'")
-    print(f"Password received: '{user_login.password}'")
-    print(f"Password length: {len(user_login.password)} chars")
-    print(f"Password bytes: {len(user_login.password.encode('utf-8'))} bytes")
-    print(f"{'='*50}\n")
-    
     user = authenticate_user(db, user_login.email, user_login.password)
     if not user:
         raise HTTPException(status_code=401, detail="Incorrect email or password")
@@ -130,9 +141,10 @@ def logout_admin():
         key="token",
         path="/",
         samesite="Lax",
-        secure=False,  # change to True in production
+        secure=False,
     )
     return response
+
 
 @router.get("/me")
 def get_me(current_user: User = Depends(get_current_user)):

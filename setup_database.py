@@ -1,26 +1,41 @@
+import bcrypt  # ✅ Direct bcrypt - NO passlib
+
 from database import SessionLocal
 from models import User, Category, Product
-from passlib.context import CryptContext
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# --- PASSWORD HASHING SETUP ---
+BCRYPT_MAX_BYTES = 72
+DEFAULT_ROUNDS = 12
 
+
+def get_password_hash(password: str) -> str:
+    """Hash password safely using bcrypt directly."""
+    password_bytes = password.encode('utf-8')
+    truncated_bytes = password_bytes[:BCRYPT_MAX_BYTES]
+    salt = bcrypt.gensalt(rounds=DEFAULT_ROUNDS)
+    hashed = bcrypt.hashpw(truncated_bytes, salt)
+    return hashed.decode('utf-8')
+
+
+# --- SEED DATA FUNCTION ---
 def seed_data():
     db = SessionLocal()
     try:
-        # admin user
-        if not db.query(User).filter_by(email="admin@schoolmall.co.ke").first():
+        # --- ADMIN USER ---
+        if not db.query(User).filter_by(email="admin@adventuresbookshop.co.ke").first():
             db.add(User(
-                email="admin@schoolmall.co.ke",
+                email="admin@adventuresbookshop.co.ke",
                 full_name="Admin User",
-                phone="+254793488207",
-                hashed_password=pwd_context.hash("admin123"),
+                phone="+254724047489",
+                hashed_password=get_password_hash("admin123"),
                 role="admin"
             ))
+            db.commit()
             print("✅ Admin user created")
         else:
-            print("ℹ️ Admin user already exists")    
+            print("ℹ️ Admin user already exists")
 
-       # Categories
+        # --- CATEGORIES ---
         categories = [
             {"name": "Pre-school", "slug": "pre-school", "description": "Activities for pre-schoolers"},
             {"name": "Grade 1", "slug": "grade-1", "description": "Grade 1 textbooks & stationery"},
@@ -28,21 +43,23 @@ def seed_data():
             {"name": "Grade 3", "slug": "grade-3", "description": "Grade 3 materials"},
             {"name": "Art Supply", "slug": "arts", "description": "Everything to do with painting"},
             {"name": "Stationery", "slug": "stationery", "description": "Pens, pencils, notebooks"},
+            {"name": "Toys", "slug": "toy", "description": "Educational toys for kids"},
             {"name": "Technology", "slug": "technology", "description": "Computers and tech accessories"},
             {"name": "Grade 4", "slug": "grade-4", "description": "Grade 4 textbooks & materials"},
             {"name": "Grade 5", "slug": "grade-5", "description": "Grade 5 textbooks & materials"},
             {"name": "Grade 6", "slug": "grade-6", "description": "Grade 6 textbooks & materials"},
             {"name": "Grade 7", "slug": "grade-7", "description": "Grade 7 textbooks & materials"},
             {"name": "Grade 8", "slug": "grade-8", "description": "Grade 8 textbooks & materials"},
-            {"name": "Junior High School", "slug": "junior high ", "description": "Junior high school textbooks & stationery"}
+            {"name": "Junior High School", "slug": "junior-high", "description": "Junior high school textbooks & stationery"},
+            {"name": "Books", "slug": "books", "description": "Educational books and guides"}
         ]
-
         for cat in categories:
             if not db.query(Category).filter_by(slug=cat["slug"]).first():
                 db.add(Category(**cat))
+        db.commit()
         print("✅ Categories seeded")
 
-        # products - WITHOUT images (admin will add them)
+        # --- PRODUCTS ---
         products = [
             {
                 "name": "TRS Guide Top Scholar Mathematics 7",
@@ -54,7 +71,7 @@ def seed_data():
                 "category_slug": "books",
                 "is_featured": True,
                 "on_sale": True,
-                "image": None  # Admin will add image
+                "image": None
             },
             {
                 "name": "KCPE English Made Easy",
@@ -117,7 +134,6 @@ def seed_data():
                 "image": None
             },
         ]
-
         for prod in products:
             if not db.query(Product).filter_by(slug=prod["slug"]).first():
                 category = db.query(Category).filter_by(slug=prod["category_slug"]).first()
@@ -134,11 +150,18 @@ def seed_data():
                         on_sale=prod["on_sale"],
                         image=prod["image"]
                     ))
-        print(" Products seeded")
-
         db.commit()
+        print("✅ Products seeded")
+
+     
+
+    except Exception as e:
+        print(f"\n❌ Error during seeding: {e}")
+        db.rollback()
+        raise
     finally:
         db.close()
+
 
 if __name__ == "__main__":
     seed_data()
