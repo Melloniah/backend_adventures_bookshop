@@ -6,8 +6,9 @@ from database import engine
 from models import Base
 from routers import (
     products, orders, auth, payments, categories,
-    admin, admin_products, admin_orders, admin_banners, hero_banners
+    admin, admin_products, admin_orders, admin_banners, hero_banners, delivery_routes, admin_delivery_routes
 )
+
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -33,12 +34,16 @@ app.include_router(orders.router, prefix="/orders", tags=["Orders"])
 app.include_router(payments.router, prefix="/payments", tags=["Payments"])
 app.include_router(categories.router, prefix="/categories", tags=["Categories"])
 app.include_router(hero_banners.router, prefix="/hero-banners", tags=["HeroBanners"])  # public
+app.include_router(delivery_routes.router, prefix="/delivery", tags=["DeliveryRoutes"])
+
 
 # Admin routes
 app.include_router(admin.router, prefix="/admin", tags=["Admin"])
 app.include_router(admin_products.router, prefix="/admin/products", tags=["Admin Products"])
 app.include_router(admin_orders.router, prefix="/admin/orders", tags=["Admin Orders"])
 app.include_router(admin_banners.router, prefix="/admin/hero-banners", tags=["Admin Banners"])
+app.include_router(admin_delivery_routes.router, prefix="/admin/delivery-routes", tags=["Admin Delivery Routes"])
+
 
 @app.get("/")
 async def root():
