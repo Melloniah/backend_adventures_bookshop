@@ -12,13 +12,11 @@ router = APIRouter(
 def get_dashboard_stats(db: Session = Depends(get_db), admin_user: User = Depends(get_current_admin_user)):
     total_products = db.query(Product).filter(Product.is_active == True).count()
     total_orders = db.query(Order).count()
-    total_users = db.query(User).count()
     recent_orders = db.query(Order).order_by(Order.created_at.desc()).limit(5).all()
 
     return {
         "total_products": total_products,
         "total_orders": total_orders,
-        "total_users": total_users,
         "recent_orders": recent_orders
     }
 
