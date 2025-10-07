@@ -12,7 +12,7 @@ router = APIRouter(tags=["Admin Delivery Routes"])
 
 
 
-@router.get("/", response_model=list[DeliveryRouteRead])
+@router.get("", response_model=list[DeliveryRouteRead])
 def get_all_delivery_routes(
     db: Session = Depends(get_db),
     admin_user: User = Depends(get_current_admin_user)
@@ -33,7 +33,7 @@ def get_delivery_route_by_id(
         raise HTTPException(status_code=404, detail="Route not found")
     return route
 
-@router.post("/", response_model=DeliveryRouteRead, status_code=201)
+@router.post("", response_model=DeliveryRouteRead, status_code=201)
 def create_delivery_route(
     route_data: DeliveryRouteCreate,
     db: Session = Depends(get_db),

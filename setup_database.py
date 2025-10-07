@@ -22,12 +22,12 @@ def seed_data():
     db = SessionLocal()
     try:
         # --- ADMIN USER ---
-        if not db.query(User).filter_by(email="admin@adventuresbookshop.co.ke").first():
+        if not db.query(User).filter_by(email="adventuresbooks@gmail.com").first():
             db.add(User(
-                email="admin@adventuresbookshop.co.ke",
+                email="adventuresbooks@gmail.com",
                 full_name="Admin User",
                 phone="+254724047489",
-                hashed_password=get_password_hash("admin123"),
+                hashed_password=get_password_hash("Adventures85"),
                 role="admin"
             ))
             db.commit()
@@ -37,27 +37,37 @@ def seed_data():
 
         # --- CATEGORIES ---
         categories = [
-            {"name": "Pre-school", "slug": "pre-school", "description": "Activities for pre-schoolers"},
-            {"name": "Grade 1", "slug": "grade-1", "description": "Grade 1 textbooks & stationery"},
-            {"name": "Grade 2", "slug": "grade-2", "description": "Grade 2 materials"},
-            {"name": "Grade 3", "slug": "grade-3", "description": "Grade 3 materials"},
-            {"name": "Art Supply", "slug": "arts", "description": "Everything to do with painting"},
-            {"name": "Stationery", "slug": "stationery", "description": "Pens, pencils, notebooks"},
-            {"name": "Toys", "slug": "toy", "description": "Educational toys for kids"},
-            {"name": "Technology", "slug": "technology", "description": "Computers and tech accessories"},
-            {"name": "Grade 4", "slug": "grade-4", "description": "Grade 4 textbooks & materials"},
-            {"name": "Grade 5", "slug": "grade-5", "description": "Grade 5 textbooks & materials"},
-            {"name": "Grade 6", "slug": "grade-6", "description": "Grade 6 textbooks & materials"},
-            {"name": "Grade 7", "slug": "grade-7", "description": "Grade 7 textbooks & materials"},
-            {"name": "Grade 8", "slug": "grade-8", "description": "Grade 8 textbooks & materials"},
-            {"name": "Junior High School", "slug": "junior-high", "description": "Junior high school textbooks & stationery"},
-            {"name": "Books", "slug": "books", "description": "Educational books and guides"}
+        {"name": "Pre-school", "slug": "pre-school", "description": "Activities for pre-schoolers"},
+        {"name": "Grade 1", "slug": "grade 1", "description": "Grade 1 textbooks & stationery"},
+        {"name": "Grade 2", "slug": "grade 2", "description": "Grade 2 materials"},
+        {"name": "Grade 3", "slug": "grade 3", "description": "Grade 3 materials"},
+        {"name": "Grade 4", "slug": "grade 4", "description": "Grade 4 textbooks & materials"},
+        {"name": "Grade 5", "slug": "grade 5", "description": "Grade 5 textbooks & materials"},
+        {"name": "Grade 6", "slug": "grade 6", "description": "Grade 6 textbooks & materials"},
+        {"name": "Grade 7", "slug": "grade 7", "description": "Grade 7 textbooks & materials"},
+        {"name": "Grade 8", "slug": "grade 8", "description": "Grade 8 textbooks & materials"},
+        {"name": "Grade 9", "slug": "grade 9", "description": "Grade 9 textbooks & materials"},
+        {"name": "Grade 10", "slug": "grade 10", "description": "Grade 10 textbooks & materials"},
+        {"name": "Art Supply", "slug": "arts", "description": "Everything to do with painting"},
+        {"name": "Stationery", "slug": "stationery", "description": "Pens, pencils, notebooks"},
+        {"name": "Toys", "slug": "toys", "description": "Educational toys for kids"},
+        {"name": "Technology", "slug": "technology", "description": "Computers and tech accessories"},
+        {"name": "Books", "slug": "books", "description": "Educational books and guides"}
         ]
+
         for cat in categories:
-            if not db.query(Category).filter_by(slug=cat["slug"]).first():
+            existing = db.query(Category).filter_by(name=cat["name"]).first()
+            if existing:
+                existing.slug = cat["slug"]
+                existing.description = cat["description"]
+                existing.is_active = True
+            else:
                 db.add(Category(**cat))
+
         db.commit()
-        print("✅ Categories seeded")
+        print("✅ Categories seeded/updated successfully")
+
+
 
         # --- PRODUCTS ---
         products = [

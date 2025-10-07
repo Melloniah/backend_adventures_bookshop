@@ -5,6 +5,7 @@ from database import get_db
 from models import Order, OrderItem, Product, DeliveryRoute, DeliveryStop
 from schemas import Order as OrderSchema, OrderCreate
 import uuid
+from services.email_service import send_admin_order_email
 
 router = APIRouter(
     redirect_slashes=False  
@@ -26,7 +27,7 @@ def create_order(
     total_amount = 0
     order_items_data = []
 
-    # Calculate total and lock prices
+    # --- Calculate total and lock prices ---
     for item in order.items:
         product = db.query(Product).filter(Product.id == item.product_id).first()
         if not product:
@@ -35,7 +36,7 @@ def create_order(
             raise HTTPException(
                 status_code=400,
                 detail=f"Insufficient stock for {product.name}. Available: {product.stock_quantity}"
-               )
+            )
         total_amount += product.price * item.quantity
         order_items_data.append({
             "product_id": product.id,
@@ -43,20 +44,17 @@ def create_order(
             "price": product.price
         })
 
-    # Map delivery route & stop names
-    
+    # --- Map delivery route & stop names ---
     route_name = None
     stop_name = None
     if order.delivery_route_id:
         route = db.query(DeliveryRoute).filter(DeliveryRoute.id == order.delivery_route_id).first()
         route_name = route.name if route else str(order.delivery_route_id)
-
     if order.delivery_stop_id:
         stop = db.query(DeliveryStop).filter(DeliveryStop.id == order.delivery_stop_id).first()
         stop_name = stop.name if stop else str(order.delivery_stop_id)
 
-
-    # Create order
+    # --- Create order ---
     db_order = Order(
         order_number=generate_order_number(),
         email=order.email,
@@ -75,24 +73,27 @@ def create_order(
     db.commit()
     db.refresh(db_order)
 
-    # Create order items and update stock
+    # --- Create order items and update stock ---
     for item_data in order_items_data:
         db_item = OrderItem(order_id=db_order.id, **item_data)
         db.add(db_item)
         product = db.query(Product).filter(Product.id == item_data["product_id"]).first()
         product.stock_quantity -= item_data["quantity"]
-
     db.commit()
     db.refresh(db_order)
 
-    # Load nested relationships for automatic serialization
+    # --- Send admin email in the background ---
+    background_tasks.add_task(send_admin_order_email, db_order.order_number, db_order.total_amount    # total for quick info
+)
+
+    # --- Load nested relationships for serialization ---
     db_order = db.query(Order).options(
         joinedload(Order.order_items).joinedload(OrderItem.product),
         joinedload(Order.delivery_route),
         joinedload(Order.delivery_stop)
     ).filter(Order.id == db_order.id).first()
 
-    return db_order  # ✅ FastAPI handles nested serialization
+    return db_order
 
 
 # -------------------------
