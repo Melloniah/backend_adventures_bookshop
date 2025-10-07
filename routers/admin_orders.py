@@ -4,8 +4,8 @@ from typing import List
 from datetime import datetime
 
 from database import get_db
-from models import Order, User, OrderStatusLog
-from schemas import Order as OrderSchema, OrderStatusUpdate, OrderStatusLog as OrderStatusLogSchema
+from models import Order, User, OrderStatusLog, OrderItem
+from schemas import Order as OrderSchema, OrderStatusUpdate
 from routers.auth import get_current_admin_user
 
 router = APIRouter(redirect_slashes=False)
@@ -24,31 +24,45 @@ ALLOWED_TRANSITIONS = {
 # Get all orders
 # -------------------------------
 @router.get("", response_model=List[OrderSchema])
-def get_all_orders(db: Session = Depends(get_db), admin_user: User = Depends(get_current_admin_user)):
-    # Use joinedload to eagerly fetch status logs
-    orders = db.query(Order).options(joinedload(Order.status_logs)).order_by(Order.created_at.desc()).all()
-
-    # Attach status history to each order using Pydantic from_orm
-    for order in orders:
-        order.status_history = [
-            OrderStatusLogSchema.from_orm(log) for log in order.status_logs
-        ]
+def get_all_orders(
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_current_admin_user)
+):
+    # Eagerly load relationships including delivery info
+    orders = db.query(Order).options(
+        joinedload(Order.status_logs),
+        joinedload(Order.order_items).joinedload(OrderItem.product),
+        joinedload(Order.delivery_route),
+        joinedload(Order.delivery_stop)
+    ).order_by(Order.created_at.desc()).all()
 
     return orders
 
+
+
 # -------------------------------
-# Get single order with status history
+# Get single order
 # -------------------------------
 @router.get("/{order_id}", response_model=OrderSchema)
-def get_order(order_id: int, db: Session = Depends(get_db), admin_user: User = Depends(get_current_admin_user)):
-    order = db.query(Order).options(joinedload(Order.status_logs)).filter(Order.id == order_id).first()
+def get_order(
+    order_id: int,
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_current_admin_user)
+):
+    order = db.query(Order).options(
+        joinedload(Order.status_logs),
+        joinedload(Order.order_items).joinedload(OrderItem.product),
+        joinedload(Order.delivery_route),
+        joinedload(Order.delivery_stop)
+    ).filter(Order.id == order_id).first()  # ✅ get single order
+
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
-    order.status_history = [
-        OrderStatusLogSchema.from_orm(log) for log in order.status_logs
-    ]
     return order
+
+
+
 
 # -------------------------------
 # Update order status with validation & logging
@@ -61,6 +75,7 @@ def update_order_status(
     admin_user: User = Depends(get_current_admin_user)
 ):
     order = db.query(Order).options(joinedload(Order.status_logs)).filter(Order.id == order_id).first()
+
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
@@ -71,7 +86,10 @@ def update_order_status(
 
         if new_status not in ALLOWED_TRANSITIONS.get(old_status, []):
             allowed = ", ".join(ALLOWED_TRANSITIONS.get(old_status, []))
-            raise HTTPException(status_code=400, detail=f"Cannot change status from {old_status} to {new_status}. Allowed: {allowed}")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot change status from {old_status} to {new_status}. Allowed: {allowed}"
+            )
 
         order.status = new_status
 
@@ -92,9 +110,4 @@ def update_order_status(
     db.commit()
     db.refresh(order)
 
-    # Attach status history
-    order.status_history = [
-        OrderStatusLogSchema.from_orm(log) for log in order.status_logs
-    ]
-
-    return order
+    return order  # ✅ raw SQLAlchemy object serialized automatically

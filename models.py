@@ -88,27 +88,37 @@ class Order(Base):
     email = Column(String, nullable=False)
     phone = Column(String, nullable=False)
     full_name = Column(String, nullable=False)
-    location = Column(Text, nullable=False)  # replaces address + city
+    location = Column(Text, nullable=False)
     total_amount = Column(Float, nullable=False)
 
     status = Column(Enum(OrderStatus), default=OrderStatus.pending)
-
-    # 👇 new field
     payment_method = Column(Enum(PaymentMethod), default=PaymentMethod.mpesa)
     payment_status = Column(Enum(PaymentStatus), default=PaymentStatus.pending)
 
+    # --- Foreign keys to delivery tables ---
+    delivery_route_id = Column(Integer, ForeignKey("delivery_routes.id"), nullable=True)
+    delivery_stop_id = Column(Integer, ForeignKey("delivery_stops.id"), nullable=True)
+
     notes = Column(Text, nullable=True)
+    estate = Column(String, nullable=True)
+    delivery_fee = Column(Float, default=0.0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+    # Relationships
     user = relationship("User", back_populates="orders")
     order_items = relationship("OrderItem", back_populates="order", lazy="joined")
     payments = relationship("Payment", back_populates="order")
-    status_logs = relationship("OrderStatusLog",back_populates="order",cascade="all, delete-orphan",
-    order_by="OrderStatusLog.changed_at",
-    lazy="joined"  
-)
+    status_logs = relationship(
+        "OrderStatusLog",
+        back_populates="order",
+        cascade="all, delete-orphan",
+        order_by="OrderStatusLog.changed_at",
+        lazy="joined"
+    )
 
-
+    # Relationships for delivery
+    delivery_route = relationship("DeliveryRoute", lazy="joined")
+    delivery_stop = relationship("DeliveryStop", lazy="joined")
 
 
 class OrderItem(Base):
@@ -165,3 +175,22 @@ class HeroBanner(Base):
     image = Column(String, nullable=False)  # store /static/images/filename
     created_at = Column(DateTime(timezone=True), server_default=func.now())
  
+
+class DeliveryRoute(Base):
+    __tablename__ = "delivery_routes"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String, unique=True, nullable=False)
+
+    stops = relationship("DeliveryStop", back_populates="route", cascade="all, delete-orphan")
+
+
+class DeliveryStop(Base):
+    __tablename__ = "delivery_stops"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    price = Column(Integer, nullable=False)
+    route_id = Column(Integer, ForeignKey("delivery_routes.id"), nullable=False)
+
+    route = relationship("DeliveryRoute", back_populates="stops")

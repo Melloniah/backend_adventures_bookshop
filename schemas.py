@@ -105,9 +105,51 @@ class ProductUpdate(BaseModel):
     is_active: Optional[bool] = None
 
 
+# ----------------------------
+# STOP SCHEMAS
+# ----------------------------
+class DeliveryStopBase(BaseModel):
+    name: str
+    price: float
+
+
+class DeliveryStopCreate(DeliveryStopBase):
+    pass
+
+
+class DeliveryStopRead(DeliveryStopBase):
+    id: int
+    name: str
+
+    class Config:
+        from_attributes = True
+
+
+# ----------------------------
+# ROUTE SCHEMAS
+# ----------------------------
+class DeliveryRouteBase(BaseModel):
+    name: str
+
+
+class DeliveryRouteCreate(DeliveryRouteBase):
+    stops: List[DeliveryStopCreate]
+
+
+class DeliveryRouteUpdate(BaseModel):
+    name: Optional[str] = None
+    stops: Optional[List[DeliveryStopCreate]] = None
+
+
+class DeliveryRouteRead(DeliveryRouteBase):
+    id: int
+    stops: List[DeliveryStopRead]
+
+    class Config:
+        from_attributes= True
+
 # -------------------------------
 # Order Schemas
-# -------------------------------
 class OrderItemCreate(BaseModel):
     product_id: int
     quantity: int
@@ -119,9 +161,13 @@ class OrderCreate(BaseModel):
     email: EmailStr
     phone: str
     location: str
+    estate: Optional[str] = None
+    delivery_fee: Optional[float] = 0.0
     notes: Optional[str] = None
-    payment_method: str  # "mpesa" | "whatsapp"
+    payment_method: str
     items: List[OrderItemCreate]
+    delivery_route_id: Optional[int] = None
+    delivery_stop_id: Optional[int] = None
 
 
 class OrderItem(BaseModel):
@@ -132,7 +178,7 @@ class OrderItem(BaseModel):
     product: Product
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class OrderStatusLog(BaseModel):
@@ -151,15 +197,21 @@ class Order(BaseModel):
     email: EmailStr
     phone: str
     location: str
+    estate: Optional[str] = None
+    delivery_fee: Optional[float] = 0.0
     total_amount: float
     status: OrderStatus
     payment_status: PaymentStatus
     created_at: datetime
     order_items: List[OrderItem] = []
-    status_history: Optional[List[OrderStatusLog]] = []  # ✅ Added for admin logs
+    status_logs: List[OrderStatusLog] = []
+
+    # --- nested delivery info ---
+    delivery_route: Optional[DeliveryRouteRead] = None
+    delivery_stop: Optional[DeliveryStopRead] = None
 
     class Config:
-        orm_mode = True
+        from_attributes= True
 
 
 # -------------------------------
@@ -178,3 +230,6 @@ class PaymentCreate(BaseModel):
     phone_number: str
     amount: float
     method: str   # "mpesa" | "whatsapp"
+
+
+

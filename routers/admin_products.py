@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, File, UploadFile
 from sqlalchemy.orm import Session
 import os
 from typing import List 
+import uuid
 
 from database import get_db
 from models import Product, User
