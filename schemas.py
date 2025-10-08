@@ -56,7 +56,7 @@ class Category(BaseModel):
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class ProductCreate(BaseModel):
@@ -88,7 +88,7 @@ class Product(BaseModel):
     category: Optional[Category] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class ProductUpdate(BaseModel):

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, File, UploadFile
 from sqlalchemy.orm import Session
 import os
-from typing import List 
+from typing import List, Dict, Any
 import uuid
 
 from database import get_db
@@ -14,24 +14,59 @@ router = APIRouter(
     redirect_slashes=False  
 )
 
-# Get all products
-@router.get("", response_model=List[ProductSchema])
-def get_all_products(db: Session = Depends(get_db), admin_user: User = Depends(get_current_admin_user)):
-    return db.query(Product).order_by(Product.created_at.desc()).all()
-
-# Search products
-@router.get("/search", response_model=List[ProductSchema])
-def search_products(
-    q: str = Query(..., description="Search term"),
+# ----------------------------
+# Get all products (paginated)
+# ----------------------------
+@router.get("", response_model=Dict[str, Any])
+def get_all_products(
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
     admin_user: User = Depends(get_current_admin_user)
 ):
-    return (
-        db.query(Product)
-        .filter(Product.name.ilike(f"%{q}%"))
-        .order_by(Product.created_at.desc())
-        .all()
-    )
+    query = db.query(Product).order_by(Product.created_at.desc())
+    total_items = query.count()
+    total_pages = (total_items + limit - 1) // limit
+
+    products = query.offset((page - 1) * limit).limit(limit).all()
+
+    # Convert to Pydantic models
+    product_list = [ProductSchema.model_validate(p) for p in products]
+
+    return {
+        "products": product_list,
+        "total_items": total_items,
+        "total_pages": total_pages,
+        "current_page": page
+    }
+
+# ----------------------------
+# Search products (paginated)
+# ----------------------------
+@router.get("/search", response_model=Dict[str, Any])
+def search_products(
+    q: str = Query(..., description="Search term"),
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_current_admin_user)
+):
+    query = db.query(Product).filter(Product.name.ilike(f"%{q}%")).order_by(Product.created_at.desc())
+    total_items = query.count()
+    total_pages = (total_items + limit - 1) // limit
+
+    products = query.offset((page - 1) * limit).limit(limit).all()
+
+    # Convert to Pydantic models
+    product_list = [ProductSchema.model_validate(p) for p in products]
+
+    return {
+        "products": product_list,
+        "total_items": total_items,
+        "total_pages": total_pages,
+        "current_page": page
+    }
+
 
 # Create product
 @router.post("", response_model=ProductSchema)
