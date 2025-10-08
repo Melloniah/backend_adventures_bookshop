@@ -88,7 +88,7 @@ class Order(Base):
     email = Column(String, nullable=False)
     phone = Column(String, nullable=False)
     full_name = Column(String, nullable=False)
-    location = Column(Text, nullable=False)
+    location = Column(Text, nullable=True)
     total_amount = Column(Float, nullable=False)
 
     status = Column(Enum(OrderStatus), default=OrderStatus.pending)

@@ -7,9 +7,7 @@ from schemas import Order as OrderSchema, OrderCreate
 import uuid
 from services.email_service import send_admin_order_email
 
-router = APIRouter(
-    redirect_slashes=False  
-)
+router = APIRouter() 
 
 def generate_order_number():
     return f"SM{uuid.uuid4().hex[:8].upper()}"
@@ -44,15 +42,11 @@ def create_order(
             "price": product.price
         })
 
-    # --- Map delivery route & stop names ---
-    route_name = None
-    stop_name = None
-    if order.delivery_route_id:
-        route = db.query(DeliveryRoute).filter(DeliveryRoute.id == order.delivery_route_id).first()
-        route_name = route.name if route else str(order.delivery_route_id)
-    if order.delivery_stop_id:
-        stop = db.query(DeliveryStop).filter(DeliveryStop.id == order.delivery_stop_id).first()
-        stop_name = stop.name if stop else str(order.delivery_stop_id)
+    # --- Determine delivery info ---
+    delivery_fee = order.delivery_fee or 0
+    location = order.location if order.delivery_route_id and order.delivery_stop_id else None
+    route = db.query(DeliveryRoute).filter(DeliveryRoute.id == order.delivery_route_id).first() if order.delivery_route_id else None
+    stop = db.query(DeliveryStop).filter(DeliveryStop.id == order.delivery_stop_id).first() if order.delivery_stop_id else None
 
     # --- Create order ---
     db_order = Order(
@@ -60,10 +54,10 @@ def create_order(
         email=order.email,
         phone=order.phone,
         full_name=order.full_name,
-        location=order.location,
+        location=location,
         estate=order.estate,
-        delivery_fee=order.delivery_fee,
-        total_amount=total_amount + (order.delivery_fee or 0),
+        delivery_fee=delivery_fee,
+        total_amount=total_amount + delivery_fee,
         notes=order.notes,
         payment_method=order.payment_method,
         delivery_route_id=order.delivery_route_id,
@@ -83,8 +77,7 @@ def create_order(
     db.refresh(db_order)
 
     # --- Send admin email in the background ---
-    background_tasks.add_task(send_admin_order_email, db_order.order_number, db_order.total_amount    # total for quick info
-)
+    background_tasks.add_task(send_admin_order_email, db_order.order_number, db_order.total_amount)
 
     # --- Load nested relationships for serialization ---
     db_order = db.query(Order).options(
@@ -94,6 +87,7 @@ def create_order(
     ).filter(Order.id == db_order.id).first()
 
     return db_order
+
 
 
 # -------------------------

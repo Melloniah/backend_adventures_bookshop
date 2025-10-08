@@ -10,9 +10,8 @@ from schemas import ProductCreate, ProductUpdate, Product as ProductSchema
 from routers.auth import get_current_admin_user
 from utils.delete_file import delete_file_if_exists
 
-router = APIRouter(
-    redirect_slashes=False  
-)
+
+router = APIRouter() 
 
 # ----------------------------
 # Get all products (paginated)

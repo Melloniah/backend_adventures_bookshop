@@ -8,7 +8,7 @@ from models import Order, User, OrderStatusLog, OrderItem
 from schemas import Order as OrderSchema, OrderStatusUpdate
 from routers.auth import get_current_admin_user
 
-router = APIRouter(redirect_slashes=False)
+router = APIRouter() 
 
 # Allowed transitions
 ALLOWED_TRANSITIONS = {

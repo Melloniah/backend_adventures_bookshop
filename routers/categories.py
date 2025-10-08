@@ -4,9 +4,7 @@ from database import get_db
 from models import Category, Product
 from typing import Optional
 
-router = APIRouter(
-    redirect_slashes=False  
-)
+router = APIRouter() 
 
 @router.get("")
 def get_categories(db: Session = Depends(get_db)):

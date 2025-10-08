@@ -4,9 +4,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import HeroBanner
 
-router = APIRouter(
-    redirect_slashes=False  
-)
+router = APIRouter() 
 
 @router.get("")   # 👈 root because main.py already gives prefix /hero-banners
 def get_public_banners(db: Session = Depends(get_db)):
