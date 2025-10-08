@@ -6,9 +6,7 @@ from database import get_db
 from models import Product as ProductModel, Category
 from schemas import Product as ProductSchema
 
-router = APIRouter(
-    redirect_slashes=False  
-)
+router = APIRouter() 
 
 # ----------------------------
 # Public: Get all active products (paginated)

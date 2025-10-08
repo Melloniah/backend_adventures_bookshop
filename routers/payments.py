@@ -11,9 +11,7 @@ from models import Payment, Order, PaymentMethod, PaymentStatus
 from schemas import PaymentCreate
 from config import settings
 
-router = APIRouter(
-    redirect_slashes=False  
-)
+router = APIRouter() 
 
 # ==============================
 # MPESA FLOW

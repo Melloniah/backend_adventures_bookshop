@@ -4,9 +4,7 @@ from database import get_db
 from models import User, Product, Order
 from routers.auth import get_current_admin_user
 
-router = APIRouter(
-    redirect_slashes=False  
-)
+router = APIRouter() 
 
 @router.get("/dashboard")
 def get_dashboard_stats(db: Session = Depends(get_db), admin_user: User = Depends(get_current_admin_user)):

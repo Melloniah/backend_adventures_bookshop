@@ -1,7 +1,7 @@
 # routers/admin_delivery_routes.py
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session, joinedload
 from database import get_db
 from models import DeliveryRoute, DeliveryStop
 from schemas import DeliveryRouteCreate, DeliveryRouteUpdate, DeliveryRouteRead
@@ -12,26 +12,30 @@ router = APIRouter(tags=["Admin Delivery Routes"])
 
 
 
-@router.get("", response_model=list[DeliveryRouteRead])
+@router.get("", response_model=dict)
 def get_all_delivery_routes(
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
     admin_user: User = Depends(get_current_admin_user)
 ):
-    """Fetch all delivery routes including their stops."""
-    routes = db.query(DeliveryRoute).all()
-    return routes
+    """Fetch delivery routes with stops, paginated."""
+    query = db.query(DeliveryRoute).options(joinedload(DeliveryRoute.stops))
+    total_items = query.count()
+    total_pages = (total_items + limit - 1) // limit
 
-@router.get("/{route_id}", response_model=DeliveryRouteRead)
-def get_delivery_route_by_id(
-    route_id: int,
-    db: Session = Depends(get_db),
-    admin_user: User = Depends(get_current_admin_user)
-):
-    """Fetch a single delivery route by ID."""
-    route = db.query(DeliveryRoute).filter_by(id=route_id).first()
-    if not route:
-        raise HTTPException(status_code=404, detail="Route not found")
-    return route
+    routes = query.order_by(DeliveryRoute.id.desc()) \
+                  .offset((page - 1) * limit) \
+                  .limit(limit) \
+                  .all()
+
+    return {
+        "routes": [DeliveryRouteRead.model_validate(r) for r in routes],
+        "total_items": total_items,
+        "total_pages": total_pages,
+        "current_page": page,
+        "limit": limit
+    }
 
 @router.post("", response_model=DeliveryRouteRead, status_code=201)
 def create_delivery_route(

@@ -1,8 +1,8 @@
-"""Initial create with delivery FKs
+"""Initial migration
 
-Revision ID: 8d1dfa1ae609
-Revises: ae78ac682481
-Create Date: 2025-10-06 13:28:25.754067
+Revision ID: fa7f1b7c1c24
+Revises: 
+Create Date: 2025-10-08 17:09:20.120323
 
 """
 from typing import Sequence, Union
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '8d1dfa1ae609'
-down_revision: Union[str, None] = 'ae78ac682481'
+revision: str = 'fa7f1b7c1c24'
+down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -27,7 +27,7 @@ def upgrade() -> None:
     sa.Column('description', sa.Text(), nullable=True),
     sa.Column('image', sa.String(), nullable=True),
     sa.Column('is_active', sa.Boolean(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_categories_id'), 'categories', ['id'], unique=False)
@@ -45,7 +45,7 @@ def upgrade() -> None:
     sa.Column('subtitle', sa.String(), nullable=True),
     sa.Column('description', sa.String(), nullable=True),
     sa.Column('image', sa.String(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_hero_banners_id'), 'hero_banners', ['id'], unique=False)
@@ -57,7 +57,7 @@ def upgrade() -> None:
     sa.Column('hashed_password', sa.String(), nullable=False),
     sa.Column('role', sa.Enum('admin', 'customer', name='userrole'), nullable=True),
     sa.Column('is_active', sa.Boolean(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
@@ -84,7 +84,7 @@ def upgrade() -> None:
     sa.Column('is_active', sa.Boolean(), nullable=True),
     sa.Column('is_featured', sa.Boolean(), nullable=True),
     sa.Column('on_sale', sa.Boolean(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
     sa.ForeignKeyConstraint(['category_id'], ['categories.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
@@ -98,7 +98,7 @@ def upgrade() -> None:
     sa.Column('email', sa.String(), nullable=False),
     sa.Column('phone', sa.String(), nullable=False),
     sa.Column('full_name', sa.String(), nullable=False),
-    sa.Column('location', sa.Text(), nullable=False),
+    sa.Column('location', sa.Text(), nullable=True),
     sa.Column('total_amount', sa.Float(), nullable=False),
     sa.Column('status', sa.Enum('pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', name='orderstatus'), nullable=True),
     sa.Column('payment_method', sa.Enum('mpesa', 'whatsapp', name='paymentmethod'), nullable=True),
@@ -108,7 +108,7 @@ def upgrade() -> None:
     sa.Column('notes', sa.Text(), nullable=True),
     sa.Column('estate', sa.String(), nullable=True),
     sa.Column('delivery_fee', sa.Float(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
     sa.ForeignKeyConstraint(['delivery_route_id'], ['delivery_routes.id'], ),
     sa.ForeignKeyConstraint(['delivery_stop_id'], ['delivery_stops.id'], ),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
@@ -122,7 +122,7 @@ def upgrade() -> None:
     sa.Column('product_id', sa.Integer(), nullable=True),
     sa.Column('quantity', sa.Integer(), nullable=False),
     sa.Column('price', sa.Float(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
     sa.ForeignKeyConstraint(['order_id'], ['orders.id'], ),
     sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
     sa.PrimaryKeyConstraint('id')
@@ -149,7 +149,7 @@ def upgrade() -> None:
     sa.Column('status', sa.Enum('pending', 'completed', 'failed', 'refunded', name='paymentstatus'), nullable=True),
     sa.Column('provider_reference', sa.String(), nullable=True),
     sa.Column('provider_response', sa.Text(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
     sa.ForeignKeyConstraint(['order_id'], ['orders.id'], ),
     sa.PrimaryKeyConstraint('id')
     )

@@ -6,9 +6,8 @@ from database import get_db
 from models import HeroBanner, User
 from routers.auth import get_current_admin_user
 
-router = APIRouter(
-    redirect_slashes=False  
-)
+router = APIRouter() 
+
 
 @router.get("")
 def get_banners(db: Session = Depends(get_db), admin_user: User = Depends(get_current_admin_user)):

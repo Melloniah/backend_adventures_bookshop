@@ -160,7 +160,7 @@ class OrderCreate(BaseModel):
     full_name: str
     email: EmailStr
     phone: str
-    location: str
+    location: Optional[str] = None   # ✅ optional now
     estate: Optional[str] = None
     delivery_fee: Optional[float] = 0.0
     notes: Optional[str] = None
@@ -168,6 +168,7 @@ class OrderCreate(BaseModel):
     items: List[OrderItemCreate]
     delivery_route_id: Optional[int] = None
     delivery_stop_id: Optional[int] = None
+
 
 
 class OrderItem(BaseModel):
@@ -196,7 +197,7 @@ class Order(BaseModel):
     full_name: str
     email: EmailStr
     phone: str
-    location: str
+    location: Optional[str] = None
     estate: Optional[str] = None
     delivery_fee: Optional[float] = 0.0
     total_amount: float
