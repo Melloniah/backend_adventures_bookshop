@@ -16,6 +16,20 @@ def generate_order_number():
 # -------------------------
 # Create Order (customer checkout)
 # -------------------------
+# routes/orders.py
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from sqlalchemy.orm import Session, joinedload
+from database import get_db
+from models import Order, OrderItem, Product, DeliveryRoute, DeliveryStop
+from schemas import Order as OrderSchema, OrderCreate
+import uuid
+from services.email_service import send_admin_order_email
+
+router = APIRouter()
+
+def generate_order_number():
+    return f"SM{uuid.uuid4().hex[:8].upper()}"
+
 @router.post("", response_model=OrderSchema)
 def create_order(
     order: OrderCreate,
@@ -76,7 +90,7 @@ def create_order(
     db.commit()
     db.refresh(db_order)
 
-    # --- Send admin email in the background ---
+    # --- Send admin email asynchronously ---
     background_tasks.add_task(send_admin_order_email, db_order.order_number, db_order.total_amount)
 
     # --- Load nested relationships for serialization ---
@@ -87,6 +101,7 @@ def create_order(
     ).filter(Order.id == db_order.id).first()
 
     return db_order
+
 
 
 
