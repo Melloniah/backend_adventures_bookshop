@@ -11,11 +11,18 @@ else:
 class Settings:
     ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
     DATABASE_URL = os.getenv("DATABASE_URL")
+    
+    # JWT Settings - Add SECRET_KEY alias
     JWT_SECRET = os.getenv("JWT_SECRET")
+    SECRET_KEY = os.getenv("JWT_SECRET")  # ✅ Add this line - alias for JWT_SECRET
     JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+    ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")  # ✅ Add this alias too
     ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 1440))
-    CORS_ORIGINS = os.getenv("CORS_ORIGINS", "").split(",")
-
+    
+    # CORS - Fix empty string issue
+    _cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000")
+    CORS_ORIGINS = [origin.strip() for origin in _cors_origins.split(",") if origin.strip()]  # ✅ Filter empty strings
+    
     # M-Pesa
     MPESA_CONSUMER_KEY = os.getenv("MPESA_CONSUMER_KEY")
     MPESA_CONSUMER_SECRET = os.getenv("MPESA_CONSUMER_SECRET")
