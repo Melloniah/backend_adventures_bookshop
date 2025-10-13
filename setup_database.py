@@ -23,8 +23,7 @@ def get_password_hash(password: str) -> str:
     hashed = bcrypt.hashpw(password_bytes, salt)
     return hashed.decode("utf-8")
 
-# --- Ensure tables exist ---
-Base.metadata.create_all(bind=engine)
+
 
 # --- Seed data ---
 def seed_data():
