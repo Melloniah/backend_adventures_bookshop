@@ -233,4 +233,27 @@ class PaymentCreate(BaseModel):
     method: str   # "mpesa" | "whatsapp"
 
 
+# CATEGORIES
+class CategoryCreate(BaseModel):
+    name: str
+    description: str | None = None
+    image: str | None = None  # optional URL/path
 
+
+class CategoryOut(BaseModel):
+    id: int
+    name: str
+    slug: str
+    description: str | None
+    image: str | None
+    is_active: bool
+
+    class Config:
+        from_attributes = True
+
+
+class CategoryListOut(BaseModel):
+    total: int
+    skip: int
+    limit: int
+    categories: list[CategoryOut]
