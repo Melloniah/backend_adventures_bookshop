@@ -77,6 +77,13 @@ app = FastAPI(
     redoc_url="/redoc" if ENVIRONMENT == "development" else None,
 )
 
+@app.on_event("startup")
+async def startup_event():
+    """Run database setup on application startup"""
+    if ENVIRONMENT == "production":
+        Base.metadata.create_all(bind=engine)  # Create tables
+    seed_data()
+
 # CORS configuration
 cors_origins = [
     origin.strip() for origin in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
