@@ -9,7 +9,7 @@ from models import Base
 from routers import (
     products, orders, auth, payments, categories,
     admin, admin_products, admin_orders, admin_banners, 
-    hero_banners, delivery_routes, admin_delivery_routes
+    hero_banners, delivery_routes, admin_delivery_routes, admin_categories
 )
 from setup_database import seed_data
 
@@ -65,6 +65,7 @@ app.include_router(admin_products.router, prefix="/admin/products", tags=["Admin
 app.include_router(admin_orders.router, prefix="/admin/orders", tags=["Admin Orders"])
 app.include_router(admin_banners.router, prefix="/admin/hero-banners", tags=["Admin Banners"])
 app.include_router(admin_delivery_routes.router, prefix="/admin/delivery-routes", tags=["Admin Delivery Routes"])
+app.include_router(admin_categories.router, prefix="/admin/categories", tags=["Admin Categories"])
 
 @app.get("/")
 async def root():
