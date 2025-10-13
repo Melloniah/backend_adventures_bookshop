@@ -97,9 +97,19 @@ async def get_current_user(request: Request, db: Session = Depends(get_db)):
 
 
 async def get_current_admin_user(current_user: User = Depends(get_current_user)):
-    if current_user.role != "admin":
+    
+    env_email = os.getenv("ADMIN_EMAIL")
+    
+    # Allow env-based admin
+    if current_user.email == env_email:
+        return current_user  # treat as admin
+
+    # Otherwise, check DB user role
+    if getattr(current_user, "role", None) != "admin":
         raise HTTPException(status_code=403, detail="Not authorized as admin")
+    
     return current_user
+
 
 
 # ----- ROUTES -----
@@ -108,14 +118,50 @@ router = APIRouter()
 
 @router.post("/login")
 def login_admin(user_login: UserLogin, db: Session = Depends(get_db)):
+   
+    # --- 1. Check environment variables ---
+    env_email = os.getenv("ADMIN_EMAIL")
+    env_password = os.getenv("ADMIN_PASSWORD")
+
+    if env_email and env_password:
+        if user_login.email == env_email and user_login.password == env_password:
+            # Create JWT token
+            access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+            access_token = create_access_token(
+                data={"sub": user_login.email}, expires_delta=access_token_expires
+            )
+
+            user_dict = {"id": 0, "email": env_email, "role": "admin"}  # ID 0 for env-based admin
+
+            response = JSONResponse(
+                content={
+                    "access_token": access_token,
+                    "token_type": "bearer",
+                    "user": user_dict,
+                }
+            )
+            response.set_cookie(
+                key="token",
+                value=access_token,
+                httponly=True,
+                path="/",
+                samesite="None" if IS_PRODUCTION else "Lax",
+                secure=IS_PRODUCTION,
+            )
+            return response
+
+    # --- 2. Check database ---
     user = authenticate_user(db, user_login.email, user_login.password)
     if not user:
         raise HTTPException(status_code=401, detail="Incorrect email or password")
     if user.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized as admin")
 
+    # Create JWT token for DB-based admin
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(data={"sub": user.email}, expires_delta=access_token_expires)
+    access_token = create_access_token(
+        data={"sub": user.email}, expires_delta=access_token_expires
+    )
 
     user_dict = {"id": user.id, "email": user.email, "role": user.role}
 
@@ -135,6 +181,7 @@ def login_admin(user_login: UserLogin, db: Session = Depends(get_db)):
         secure=IS_PRODUCTION,
     )
     return response
+
 
 
 @router.post("/logout")
