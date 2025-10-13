@@ -39,3 +39,5 @@ jinja2==3.1.2
 # === Optional Background Tasks ===
 # redis==5.0.1
 # celery==5.3.4
+
+python-slugify
