@@ -20,7 +20,6 @@ ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup - Alembic migrations handle table creation via start.sh
-    seed_data()  # Only seed data
     yield
     # Shutdown (cleanup if needed)
 

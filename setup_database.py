@@ -29,6 +29,18 @@ def get_password_hash(password: str) -> str:
 def seed_data():
     db = SessionLocal()
     try:
+        # ✅ Skip seeding if any core tables already have data
+        already_seeded = (
+            db.query(User).first() or
+            db.query(Category).first() or
+            db.query(Product).first() or
+            db.query(DeliveryRoute).first()
+        )
+
+        if already_seeded:
+            print("ℹ️ Database already seeded, skipping...")
+            return
+
         # --- ADMIN USER ---
         admin_user = db.query(User).filter_by(email=ADMIN_EMAIL).first()
         if not admin_user:
@@ -40,9 +52,9 @@ def seed_data():
                 role="admin"
             ))
             db.commit()
-            print(f"✅ Admin user '{ADMIN_EMAIL}' created")
+            print(f" Admin user '{ADMIN_EMAIL}' created")
         else:
-            print(f"ℹ️ Admin user '{ADMIN_EMAIL}' already exists")
+            print(f"ℹ Admin user '{ADMIN_EMAIL}' already exists")
 
         # --- CATEGORIES ---
         categories = [
@@ -74,6 +86,9 @@ def seed_data():
                 db.add(Category(**cat))
         db.commit()
         print("✅ Categories seeded/updated successfully")
+        db.commit()
+        print("✅ Categories seeded/updated successfully")
+        
 
         # --- PRODUCTS ---
         products = [
