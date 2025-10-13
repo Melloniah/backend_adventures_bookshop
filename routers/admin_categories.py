@@ -3,13 +3,18 @@ from typing import Dict, Any, Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Form, Response
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from slugify import slugify
 
 from database import get_db
 from models import Category, Product
 from schemas import CategoryCreate, CategoryOut, CategoryListOut
 from routers.auth import get_current_admin_user, User
-from utils import upload_image_to_cloudinary, delete_file_if_exists
+
+from utils.cloudinary_config import upload_image_to_cloudinary
+from utils.delete_file import delete_file_if_exists
+from utils.slugify_helper import generate_unique_slug
+
 
 
 router = APIRouter(
@@ -39,7 +44,7 @@ async def create_category(
 
     new_category = Category(
         name=name,
-        slug=generate_unique_slug(name, db)
+        slug=generate_unique_slug(name, db),
         description=description,
         image=image_url,
         is_active=True
