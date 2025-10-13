@@ -6,6 +6,6 @@ from models import HeroBanner
 
 router = APIRouter() 
 
-@router.get("")   # 👈 root because main.py already gives prefix /hero-banners
+@router.get("")   
 def get_public_banners(db: Session = Depends(get_db)):
     return db.query(HeroBanner).order_by(HeroBanner.created_at.desc()).all()

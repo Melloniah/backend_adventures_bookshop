@@ -9,7 +9,7 @@ from models import Product, User
 from schemas import ProductCreate, ProductUpdate, Product as ProductSchema
 from routers.auth import get_current_admin_user
 from utils.delete_file import delete_file_if_exists
-
+from utils.cloudinary_config import upload_image_to_cloudinary
 
 router = APIRouter() 
 
@@ -121,19 +121,21 @@ async def upload_image(
     if not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="File must be an image")
 
-    # Ensure directory exists
-    os.makedirs("static/images", exist_ok=True)
-
-    # Generate unique filename
-    file_extension = os.path.splitext(file.filename)[1]
-    filename = f"{uuid.uuid4()}{file_extension}"
-    file_path = os.path.join("static/images", filename)
-
-    # Save file
     try:
-        with open(file_path, "wb") as buffer:
-            buffer.write(await file.read())
+        # Read file content
+        file_content = await file.read()
+        
+        # Upload to Cloudinary
+        image_url = upload_image_to_cloudinary(
+            file_content, 
+            file.filename, 
+            folder="ecommerce/products"
+        )
+        
+        return {
+            "filename": file.filename,
+            "url": image_url  # Now returns Cloudinary URL
+        }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to save image: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to upload image: {str(e)}")
 
-    return {"filename": filename, "url": f"/static/images/{filename}"}

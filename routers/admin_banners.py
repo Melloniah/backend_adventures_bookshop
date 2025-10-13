@@ -5,6 +5,8 @@ import os, uuid
 from database import get_db
 from models import HeroBanner, User
 from routers.auth import get_current_admin_user
+from utils.cloudinary_config import upload_image_to_cloudinary
+
 
 router = APIRouter() 
 
@@ -32,19 +34,27 @@ async def create_banner(
     if not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="File must be an image")
 
-    os.makedirs("static/images", exist_ok=True)
-    ext = os.path.splitext(file.filename)[1]
-    filename = f"{uuid.uuid4()}{ext}"
-    file_path = os.path.join("static/images", filename)
+    try:
+        file_content = await file.read()
+        image_url = upload_image_to_cloudinary(
+            file_content, 
+            file.filename, 
+            folder="ecommerce/banners"
+        )
+        
+        banner = HeroBanner(
+            title=title, 
+            subtitle=subtitle, 
+            description=description, 
+            image=image_url  # Store Cloudinary URL
+        )
+        db.add(banner)
+        db.commit()
+        db.refresh(banner)
+        return banner
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create banner: {str(e)}")
 
-    with open(file_path, "wb") as buffer:
-        buffer.write(await file.read())
-
-    banner = HeroBanner(title=title, subtitle=subtitle, description=description, image=f"/static/images/{filename}")
-    db.add(banner)
-    db.commit()
-    db.refresh(banner)
-    return banner
 
 @router.put("/{banner_id}")
 async def update_banner(
@@ -68,21 +78,26 @@ async def update_banner(
         if not file.content_type.startswith("image/"):
             raise HTTPException(status_code=400, detail="File must be an image")
 
-        if banner.image and os.path.exists(banner.image.lstrip("/")):
-            os.remove(banner.image.lstrip("/"))
+        # Delete old image from Cloudinary
+        if banner.image:
+            delete_file_if_exists(banner.image)
 
-        ext = os.path.splitext(file.filename)[1]
-        filename = f"{uuid.uuid4()}{ext}"
-        file_path = os.path.join("static/images", filename)
-
-        with open(file_path, "wb") as buffer:
-            buffer.write(await file.read())
-
-        banner.image = f"/static/images/{filename}"
+        # Upload new image
+        try:
+            file_content = await file.read()
+            image_url = upload_image_to_cloudinary(
+                file_content, 
+                file.filename, 
+                folder="ecommerce/banners"
+            )
+            banner.image = image_url
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to upload image: {str(e)}")
 
     db.commit()
     db.refresh(banner)
     return banner
+
 
 @router.delete("/{banner_id}")
 def delete_banner(banner_id: int, db: Session = Depends(get_db), admin_user: User = Depends(get_current_admin_user)):
