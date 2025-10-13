@@ -150,6 +150,7 @@ def login_admin(user_login: UserLogin, db: Session = Depends(get_db)):
 # --- LOGOUT ---
 @router.post("/logout")
 def logout_admin():
+    response = JSONResponse(content={"detail": "Logged out successfully"})
     cookie_params = {
         "key": "token",
         "value": "",
@@ -158,13 +159,21 @@ def logout_admin():
         "samesite": "None" if IS_PRODUCTION else "Lax",
         "secure": IS_PRODUCTION,
         "max_age": 0,
+        "expires": 0,
     }
     if IS_PRODUCTION:
         cookie_params["domain"] = ".adventuresbookshop.org"
 
-    response = JSONResponse(content={"detail": "Logged out successfully"})
-    response.delete_cookie(key="token", path=cookie_params["path"])
+    response.delete_cookie(
+        key=cookie_params["key"],
+        path=cookie_params["path"],
+        domain=cookie_params.get("domain"),
+        secure=cookie_params["secure"],
+        httponly=cookie_params["httponly"],
+        samesite=cookie_params["samesite"],
+    )
     return response
+
 
 
 # --- CURRENT USER ---
