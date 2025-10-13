@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 import bcrypt  # ✅ Direct bcrypt - NO passlib
+import os
 
 from database import get_db
 from models import User
@@ -15,6 +16,8 @@ from config import settings
 BCRYPT_MAX_BYTES = 72
 DEFAULT_ROUNDS = 12
 
+
+IS_PRODUCTION = os.getenv("ENVIRONMENT") == "production"
 
 def get_password_hash(password: str) -> str:
     """Hash a password using bcrypt directly."""
@@ -128,8 +131,8 @@ def login_admin(user_login: UserLogin, db: Session = Depends(get_db)):
         value=access_token,
         httponly=True,
         path="/",
-        samesite="Lax",
-        secure=False,
+        samesite="None" if IS_PRODUCTION else "Lax",
+        secure=IS_PRODUCTION,
     )
     return response
 
@@ -140,8 +143,8 @@ def logout_admin():
     response.delete_cookie(
         key="token",
         path="/",
-        samesite="Lax",
-        secure=False,
+        samesite="None" if IS_PRODUCTION else "Lax",
+        secure=IS_PRODUCTION,
     )
     return response
 
