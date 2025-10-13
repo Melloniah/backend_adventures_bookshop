@@ -19,10 +19,8 @@ ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 # DEFINE LIFESPAN BEFORE CREATING APP
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
-    if ENVIRONMENT == "production":
-        Base.metadata.create_all(bind=engine)
-    seed_data()
+    # Startup - Alembic migrations handle table creation via start.sh
+    seed_data()  # Only seed data
     yield
     # Shutdown (cleanup if needed)
 
