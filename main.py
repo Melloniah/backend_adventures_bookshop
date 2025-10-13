@@ -1,59 +1,8 @@
-# from fastapi import FastAPI
-# from fastapi.middleware.cors import CORSMiddleware
-# from fastapi.staticfiles import StaticFiles
-
-# from database import engine
-# from models import Base
-# from routers import (
-#     products, orders, auth, payments, categories,
-#     admin, admin_products, admin_orders, admin_banners, hero_banners, delivery_routes, admin_delivery_routes
-# )
-
-
-# # Create database tables
-# Base.metadata.create_all(bind=engine)
-
-# app = FastAPI(title="Adventures Bookshop API", redirect_slashes=False)  # optional: disable auto-redirect
-
-# # CORS middleware
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=["http://localhost:3000"],
-#     allow_credentials=True,
-#     allow_methods=["*"],
-#     allow_headers=["*"],
-# )
-
-# # Static files
-# app.mount("/static", StaticFiles(directory="static"), name="static")
-
-# # Public routes
-# app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
-# app.include_router(products.router, prefix="/products", tags=["Products"])
-# app.include_router(orders.router, prefix="/orders", tags=["Orders"])
-# app.include_router(payments.router, prefix="/payments", tags=["Payments"])
-# app.include_router(categories.router, prefix="/categories", tags=["Categories"])
-# app.include_router(hero_banners.router, prefix="/hero-banners", tags=["HeroBanners"])  # public
-# app.include_router(delivery_routes.router, prefix="/delivery", tags=["DeliveryRoutes"])
-
-
-# # Admin routes
-# app.include_router(admin.router, prefix="/admin", tags=["Admin"])
-# app.include_router(admin_products.router, prefix="/admin/products", tags=["Admin Products"])
-# app.include_router(admin_orders.router, prefix="/admin/orders", tags=["Admin Orders"])
-# app.include_router(admin_banners.router, prefix="/admin/hero-banners", tags=["Admin Banners"])
-# app.include_router(admin_delivery_routes.router, prefix="/admin/delivery-routes", tags=["Admin Delivery Routes"])
-
-
-# @app.get("/")
-# async def root():
-#     return {"message": "AdventurersBookshop API is running!"}
-
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
+from contextlib import asynccontextmanager
 
 from database import engine
 from models import Base
@@ -62,27 +11,29 @@ from routers import (
     admin, admin_products, admin_orders, admin_banners, 
     hero_banners, delivery_routes, admin_delivery_routes
 )
+from setup_database import seed_data
 
 # Environment
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 
-# Only auto-create tables in development
-if ENVIRONMENT == "development":
-    Base.metadata.create_all(bind=engine)
+# DEFINE LIFESPAN BEFORE CREATING APP
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    if ENVIRONMENT == "production":
+        Base.metadata.create_all(bind=engine)
+    seed_data()
+    yield
+    # Shutdown (cleanup if needed)
 
+# NOW CREATE APP WITH LIFESPAN
 app = FastAPI(
     title="Adventures Bookshop API",
     redirect_slashes=False,
     docs_url="/docs" if ENVIRONMENT == "development" else None,
     redoc_url="/redoc" if ENVIRONMENT == "development" else None,
+    lifespan=lifespan,  # ADD THIS LINE!
 )
-
-@app.on_event("startup")
-async def startup_event():
-    """Run database setup on application startup"""
-    if ENVIRONMENT == "production":
-        Base.metadata.create_all(bind=engine)  # Create tables
-    seed_data()
 
 # CORS configuration
 cors_origins = [
