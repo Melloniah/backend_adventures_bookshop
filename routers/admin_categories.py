@@ -18,8 +18,6 @@ from utils.slugify_helper import generate_unique_slug
 
 
 router = APIRouter(
-    prefix="/admin/categories",
-    tags=["Admin Categories"]
 )
 
 # ---------------- CREATE CATEGORY ---------------- #
