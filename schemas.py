@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional, List
 from datetime import datetime
 from models import UserRole, OrderStatus, PaymentStatus
@@ -41,24 +41,97 @@ class Token(BaseModel):
 # -------------------------------
 # Category & Product Schemas
 # -------------------------------
-class CategoryCreate(BaseModel):
+
+# Minimal product info for category responses
+class ProductMinimal(BaseModel):
+    id: int
     name: str
     slug: str
+    price: float
+    original_price: Optional[float] = None
+    image: Optional[str] = None
+    is_active: bool
+    is_featured: bool
+    on_sale: bool
+    stock_quantity: int
+
+    class Config:
+        from_attributes = True
+
+
+class CategoryCreate(BaseModel):
+    name: str
+    slug: Optional[str] = None
     description: Optional[str] = None
+    image: Optional[str] = None
+    parent_id: Optional[int] = None
 
 
-class Category(BaseModel):
+class CategoryUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    image: Optional[str] = None
+    parent_id: Optional[int] = None
+    is_active: Optional[bool] = None
+
+
+# Base category without relationships (to avoid circular refs)
+class CategoryBase(BaseModel):
     id: int
     name: str
     slug: str
     description: Optional[str] = None
+    image: Optional[str] = None
     is_active: bool
+    parent_id: Optional[int] = None
     created_at: datetime
 
     class Config:
         from_attributes = True
 
 
+# Category with subcategories and products
+class CategoryOut(CategoryBase):
+    subcategories: List["CategoryOut"] = []
+    products: List[ProductMinimal] = []
+
+    class Config:
+        from_attributes = True
+
+
+# Simplified category tree (no products, just hierarchy)
+class CategoryTree(BaseModel):
+    id: int
+    name: str
+    slug: str
+    parent_id: Optional[int] = None
+    subcategories: List["CategoryTree"] = []
+
+    class Config:
+        from_attributes = True
+
+
+class CategoryListOut(BaseModel):
+    total: int
+    skip: int
+    limit: int
+    categories: List[CategoryOut]
+
+
+# For dropdown selects in admin
+class CategorySimple(BaseModel):
+    id: int
+    name: str
+    slug: str
+    parent_id: Optional[int] = None
+
+    class Config:
+        from_attributes = True
+
+
+# -------------------------------
+# Product Schemas
+# -------------------------------
 class ProductCreate(BaseModel):
     name: str
     slug: str
@@ -66,29 +139,10 @@ class ProductCreate(BaseModel):
     price: float
     original_price: Optional[float] = None
     stock_quantity: int = 0
-    category_id: Optional[int] = None
+    category_id: int  # Required now
     image: Optional[str] = None
     is_featured: bool = False
     on_sale: bool = False
-
-
-class Product(BaseModel):
-    id: int
-    name: str
-    slug: str
-    description: Optional[str] = None
-    price: float
-    original_price: Optional[float] = None
-    stock_quantity: int
-    image: Optional[str] = None
-    is_active: bool
-    is_featured: bool
-    on_sale: bool
-    created_at: datetime
-    category: Optional[Category] = None
-
-    class Config:
-        from_attributes = True
 
 
 class ProductUpdate(BaseModel):
@@ -105,8 +159,28 @@ class ProductUpdate(BaseModel):
     is_active: Optional[bool] = None
 
 
+class Product(BaseModel):
+    id: int
+    name: str
+    slug: str
+    description: Optional[str] = None
+    price: float
+    original_price: Optional[float] = None
+    stock_quantity: int
+    image: Optional[str] = None
+    is_active: bool
+    is_featured: bool
+    on_sale: bool
+    created_at: datetime
+    category_id: int
+    category: Optional[CategoryBase] = None
+
+    class Config:
+        from_attributes = True
+
+
 # ----------------------------
-# STOP SCHEMAS
+# DELIVERY SCHEMAS
 # ----------------------------
 class DeliveryStopBase(BaseModel):
     name: str
@@ -125,9 +199,6 @@ class DeliveryStopRead(DeliveryStopBase):
         from_attributes = True
 
 
-# ----------------------------
-# ROUTE SCHEMAS
-# ----------------------------
 class DeliveryRouteBase(BaseModel):
     name: str
 
@@ -146,21 +217,23 @@ class DeliveryRouteRead(DeliveryRouteBase):
     stops: List[DeliveryStopRead]
 
     class Config:
-        from_attributes= True
+        from_attributes = True
+
 
 # -------------------------------
 # Order Schemas
+# -------------------------------
 class OrderItemCreate(BaseModel):
     product_id: int
     quantity: int
-    price: float  # lock price from cart
+    price: float
 
 
 class OrderCreate(BaseModel):
     full_name: str
     email: EmailStr
     phone: str
-    location: Optional[str] = None   # ✅ optional now
+    location: Optional[str] = None
     estate: Optional[str] = None
     delivery_fee: Optional[float] = 0.0
     notes: Optional[str] = None
@@ -168,7 +241,6 @@ class OrderCreate(BaseModel):
     items: List[OrderItemCreate]
     delivery_route_id: Optional[int] = None
     delivery_stop_id: Optional[int] = None
-
 
 
 class OrderItem(BaseModel):
@@ -206,21 +278,16 @@ class Order(BaseModel):
     created_at: datetime
     order_items: List[OrderItem] = []
     status_logs: List[OrderStatusLog] = []
-
-    # --- nested delivery info ---
     delivery_route: Optional[DeliveryRouteRead] = None
     delivery_stop: Optional[DeliveryStopRead] = None
 
     class Config:
-        from_attributes= True
+        from_attributes = True
 
 
-# -------------------------------
-# Admin Order Update Schema
-# -------------------------------
 class OrderStatusUpdate(BaseModel):
-    status: Optional[OrderStatus] = None        # e.g. pending, shipped, delivered
-    payment_status: Optional[PaymentStatus] = None  # e.g. pending, completed, refunded
+    status: Optional[OrderStatus] = None
+    payment_status: Optional[PaymentStatus] = None
 
 
 # -------------------------------
@@ -230,30 +297,9 @@ class PaymentCreate(BaseModel):
     order_id: int
     phone_number: str
     amount: float
-    method: str   # "mpesa" | "whatsapp"
+    method: str
 
 
-# CATEGORIES
-class CategoryCreate(BaseModel):
-    name: str
-    description: str | None = None
-    image: str | None = None  # optional URL/path
-
-
-class CategoryOut(BaseModel):
-    id: int
-    name: str
-    slug: str
-    description: str | None
-    image: str | None
-    is_active: bool
-
-    class Config:
-        from_attributes = True
-
-
-class CategoryListOut(BaseModel):
-    total: int
-    skip: int
-    limit: int
-    categories: list[CategoryOut]
+# Rebuild models to resolve forward references
+CategoryOut.model_rebuild()
+CategoryTree.model_rebuild()
