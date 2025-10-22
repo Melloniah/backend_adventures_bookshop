@@ -1,8 +1,9 @@
+
 """
 Defines all database tables using SQLAlchemy ORM:
 - User: Customer and admin accounts
-- Category: Product categories (Books, Stationery, etc.)
-- Product: Items for sale
+- Category: Product categories with parent-child hierarchy
+- Product: Items for sale (can be under parent or subcategory)
 - Order: Customer orders
 - OrderItem: Individual items in an order
 - Payment: Payment records
@@ -51,16 +52,30 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     orders = relationship("Order", back_populates="user")
 
+
 class Category(Base):
     __tablename__ = "categories"
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, unique=True, index=True, nullable=False)
+    name = Column(String, nullable=False, index=True)
     slug = Column(String, unique=True, index=True, nullable=False)
     description = Column(Text, nullable=True)
     image = Column(String, nullable=True)
+    parent_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    products = relationship("Product", back_populates="category")
+
+    # Self-referential relationships for hierarchy
+    parent = relationship("Category", remote_side=[id], back_populates="subcategories")
+    subcategories = relationship(
+        "Category", 
+        back_populates="parent", 
+        cascade="all, delete-orphan",
+        lazy="selectin"  # Auto-load subcategories
+    )
+    
+    # Products can be at any level
+    products = relationship("Product", back_populates="category", lazy="selectin")
+
 
 class Product(Base):
     __tablename__ = "products"
@@ -71,14 +86,16 @@ class Product(Base):
     price = Column(Float, nullable=False)
     original_price = Column(Float, nullable=True)
     stock_quantity = Column(Integer, default=0) 
-    category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
+    category_id = Column(Integer, ForeignKey("categories.id"), nullable=False)
     image = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
     is_featured = Column(Boolean, default=False)
     on_sale = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
     category = relationship("Category", back_populates="products")
     order_items = relationship("OrderItem", back_populates="product")
+
 
 class Order(Base):
     __tablename__ = "orders"
@@ -90,21 +107,16 @@ class Order(Base):
     full_name = Column(String, nullable=False)
     location = Column(Text, nullable=True)
     total_amount = Column(Float, nullable=False)
-
     status = Column(Enum(OrderStatus), default=OrderStatus.pending)
     payment_method = Column(Enum(PaymentMethod), default=PaymentMethod.mpesa)
     payment_status = Column(Enum(PaymentStatus), default=PaymentStatus.pending)
-
-    # --- Foreign keys to delivery tables ---
     delivery_route_id = Column(Integer, ForeignKey("delivery_routes.id"), nullable=True)
     delivery_stop_id = Column(Integer, ForeignKey("delivery_stops.id"), nullable=True)
-
     notes = Column(Text, nullable=True)
     estate = Column(String, nullable=True)
     delivery_fee = Column(Float, default=0.0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    # Relationships
     user = relationship("User", back_populates="orders")
     order_items = relationship("OrderItem", back_populates="order", lazy="joined")
     payments = relationship("Payment", back_populates="order")
@@ -115,8 +127,6 @@ class Order(Base):
         order_by="OrderStatusLog.changed_at",
         lazy="joined"
     )
-
-    # Relationships for delivery
     delivery_route = relationship("DeliveryRoute", lazy="joined")
     delivery_stop = relationship("DeliveryStop", lazy="joined")
 
@@ -132,22 +142,18 @@ class OrderItem(Base):
 
     order = relationship("Order", back_populates="order_items")
     product = relationship("Product", back_populates="order_items", lazy="joined")
-    
 
 
 class OrderStatusLog(Base):
     __tablename__ = "order_status_logs"
-
     id = Column(Integer, primary_key=True, index=True)
     order_id = Column(Integer, ForeignKey("orders.id", ondelete="CASCADE"), nullable=False)
     old_status = Column(String, nullable=False)
     new_status = Column(String, nullable=False)
     changed_at = Column(DateTime, default=datetime.utcnow)
-    changed_by_admin_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # optional if you have admin users
-
+    changed_by_admin_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     order = relationship("Order", back_populates="status_logs")
 
-   
 
 class Payment(Base):
     __tablename__ = "payments"
@@ -163,34 +169,27 @@ class Payment(Base):
     order = relationship("Order", back_populates="payments")
 
 
-    #For admin to be able to change Hero banner
-
 class HeroBanner(Base):
     __tablename__ = "hero_banners"
-
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, nullable=False)
     subtitle = Column(String, nullable=True)
     description = Column(String, nullable=True)
-    image = Column(String, nullable=False)  # store /static/images/filename
+    image = Column(String, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
- 
+
 
 class DeliveryRoute(Base):
     __tablename__ = "delivery_routes"
-
     id = Column(Integer, primary_key=True)
     name = Column(String, unique=True, nullable=False)
-
     stops = relationship("DeliveryStop", back_populates="route", cascade="all, delete-orphan")
 
 
 class DeliveryStop(Base):
     __tablename__ = "delivery_stops"
-
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
     price = Column(Integer, nullable=False)
     route_id = Column(Integer, ForeignKey("delivery_routes.id"), nullable=False)
-
     route = relationship("DeliveryRoute", back_populates="stops")
