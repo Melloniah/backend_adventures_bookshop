@@ -104,7 +104,10 @@ class CategoryTree(BaseModel):
     id: int
     name: str
     slug: str
-    parent_id: Optional[int] = None
+    description: Optional[str]
+    image: Optional[str]
+    is_active: bool
+    parent_id: Optional[int]
     subcategories: List["CategoryTree"] = []
 
     class Config:
