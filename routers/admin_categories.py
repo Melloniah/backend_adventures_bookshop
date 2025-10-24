@@ -92,9 +92,22 @@ def get_category_tree(
     db: Session = Depends(get_db),
     admin_user: User = Depends(get_current_admin_user)
 ):
-    """Get hierarchical tree of categories"""
+    """Get hierarchical tree of categories with subcategories."""
+
+    def build_tree(category):
+        return {
+            "id": category.id,
+            "name": category.name,
+            "slug": category.slug,
+            "description": category.description,
+            "image": category.image,
+            "is_active": category.is_active,
+            "parent_id": category.parent_id,
+            "subcategories": [build_tree(sub) for sub in category.subcategories],
+        }
+
     parents = db.query(Category).filter(Category.parent_id == None).all()
-    return parents
+    return [build_tree(parent) for parent in parents]
 
 
 @router.get("/parents", response_model=List[CategorySimple])
@@ -106,6 +119,31 @@ def get_parent_categories(
     parents = db.query(Category).filter(Category.parent_id == None).all()
     return parents
 
+
+@router.get("/search", response_model=CategoryListOut)
+def search_categories(
+    q: str = Query(..., min_length=1),
+    db: Session = Depends(get_db),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(10, ge=1, le=100),
+    admin_user: User = Depends(get_current_admin_user)
+):
+    """Search categories by name or slug"""
+    query = db.query(Category).filter(
+        or_(
+            Category.name.ilike(f"%{q}%"),
+            Category.slug.ilike(f"%{q}%")
+        )
+    )
+    total = query.count()
+    categories = query.offset(skip).limit(limit).all()
+    
+    return {
+        "total": total,
+        "skip": skip,
+        "limit": limit,
+        "categories": categories
+    }
 
 @router.get("/{category_id}", response_model=CategoryOut)
 def get_category(
@@ -138,22 +176,32 @@ async def update_category(
 
     old_image = category.image
 
-    if name is not None:
+    if name is not None and name != category.name:
         existing = db.query(Category).filter(
             Category.name == name,
             Category.id != category_id
         ).first()
         if existing:
             raise HTTPException(status_code=400, detail="Category name already exists")
+
         category.name = name
         category.slug = generate_unique_slug(name, db, exclude_id=category_id)
-
+        
     if description is not None:
         category.description = description
 
     if parent_id is not None:
+        # Enhanced validation
         if parent_id == category_id:
             raise HTTPException(status_code=400, detail="Category cannot be its own parent")
+        
+        # Check for circular references
+        if check_circular_parent(db, category_id, parent_id):
+            raise HTTPException(
+                status_code=400, 
+                detail="Cannot set parent: would create circular reference"
+            )
+        
         parent = db.query(Category).filter(Category.id == parent_id).first()
         if not parent:
             raise HTTPException(status_code=404, detail="Parent category not found")
@@ -174,7 +222,6 @@ async def update_category(
     db.commit()
     db.refresh(category)
     return category
-
 
 @router.delete("/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_category(
@@ -211,31 +258,28 @@ def delete_category(
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
-
-@router.get("/search", response_model=CategoryListOut)
-def search_categories(
-    q: str = Query(..., min_length=1),
-    db: Session = Depends(get_db),
-    skip: int = Query(0, ge=0),
-    limit: int = Query(10, ge=1, le=100),
-    admin_user: User = Depends(get_current_admin_user)
-):
-    """Search categories by name or slug"""
-    query = db.query(Category).filter(
-        or_(
-            Category.name.ilike(f"%{q}%"),
-            Category.slug.ilike(f"%{q}%")
-        )
-    )
-    total = query.count()
-    categories = query.offset(skip).limit(limit).all()
+def check_circular_parent(db: Session, category_id: int, new_parent_id: int) -> bool:
+    """
+    Recursively check if setting new_parent_id would create a circular reference
+    Returns True if circular, False if safe
+    """
+    if category_id == new_parent_id:
+        return True
     
-    return {
-        "total": total,
-        "skip": skip,
-        "limit": limit,
-        "categories": categories
-    }
+    current_id = new_parent_id
+    visited = set()
+    
+    while current_id is not None:
+        if current_id in visited or current_id == category_id:
+            return True
+        visited.add(current_id)
+        
+        parent = db.query(Category).filter(Category.id == current_id).first()
+        if not parent:
+            break
+        current_id = parent.parent_id
+    
+    return False
 
 
 @router.get("/{category_id}/products", response_model=List[ProductMinimal])
@@ -262,68 +306,26 @@ def get_category_products(
     return products
 
 
-# ============================================
-# PRODUCT ENDPOINTS (related to categories)
-# ============================================
-
-@router.patch("/products/{product_id}", response_model=Dict[str, Any])
-async def update_product(
-    product_id: int,
-    name: Optional[str] = Form(None),
-    description: Optional[str] = Form(None),
-    price: Optional[float] = Form(None),
-    original_price: Optional[float] = Form(None),
-    stock_quantity: Optional[int] = Form(None),
-    category_id: Optional[int] = Form(None),
-    is_featured: Optional[bool] = Form(None),
-    on_sale: Optional[bool] = Form(None),
-    is_active: Optional[bool] = Form(None),
-    image: Optional[UploadFile] = File(None),
+@router.get("/stats", response_model=Dict[str, Any])
+def get_category_stats(
     db: Session = Depends(get_db),
     admin_user: User = Depends(get_current_admin_user)
 ):
-    """Update product details including category assignment"""
-    product = db.query(Product).filter(Product.id == product_id).first()
-    if not product:
-        raise HTTPException(status_code=404, detail="Product not found")
-
-    old_image = product.image
-
-    if name is not None:
-        product.name = name
-    if description is not None:
-        product.description = description
-    if price is not None:
-        product.price = price
-    if original_price is not None:
-        product.original_price = original_price
-    if stock_quantity is not None:
-        product.stock_quantity = stock_quantity
-    if is_featured is not None:
-        product.is_featured = is_featured
-    if on_sale is not None:
-        product.on_sale = on_sale
-    if is_active is not None:
-        product.is_active = is_active
+    """Get category statistics"""
+    total_categories = db.query(Category).count()
+    parent_categories = db.query(Category).filter(Category.parent_id == None).count()
+    active_categories = db.query(Category).filter(Category.is_active == True).count()
+    categories_with_products = db.query(Category).join(Product).distinct().count()
     
-    if category_id is not None:
-        category = db.query(Category).filter(Category.id == category_id).first()
-        if not category:
-            raise HTTPException(status_code=404, detail="Category not found")
-        product.category_id = category_id
-
-    if image:
-        if not image.content_type.startswith("image/"):
-            raise HTTPException(status_code=400, detail="File must be an image")
-        content = await image.read()
-        image_url = upload_image_to_cloudinary(content, image.filename, folder="ecommerce/products")
-        product.image = image_url
-        if old_image:
-            delete_file_if_exists(old_image)
-
-    db.commit()
-    db.refresh(product)
-    return {"detail": "Product updated", "product": product}
+    return {
+        "total": total_categories,
+        "parents": parent_categories,
+        "subcategories": total_categories - parent_categories,
+        "active": active_categories,
+        "inactive": total_categories - active_categories,
+        "with_products": categories_with_products,
+        "empty": total_categories - categories_with_products
+    }
 
 
 @router.post("/products/{product_id}/move", response_model=Dict[str, str])

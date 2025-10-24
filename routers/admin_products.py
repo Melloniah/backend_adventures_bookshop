@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, File, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Query, File, UploadFile, Form, Body
 from sqlalchemy.orm import Session
 import os
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import uuid
 
 from database import get_db
@@ -80,23 +80,66 @@ def create_product(product: ProductCreate, db: Session = Depends(get_db), admin_
     return db_product
 
 # Update product
-@router.put("/{product_id}", response_model=ProductSchema)
-def update_product(product_id: int, payload: ProductUpdate, db: Session = Depends(get_db), admin_user: User = Depends(get_current_admin_user)):
+
+@router.patch("/products/{product_id}", response_model=Dict[str, Any])
+async def update_product(
+    product_id: int,
+    name: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    price: Optional[float] = Form(None),
+    original_price: Optional[float] = Form(None),
+    stock_quantity: Optional[int] = Form(None),
+    category_id: Optional[int] = Form(None),
+    is_featured: Optional[bool] = Form(None),
+    on_sale: Optional[bool] = Form(None),
+    is_active: Optional[bool] = Form(None),
+    image: Optional[UploadFile] = File(None),
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_current_admin_user)
+):
+    """Update product details including category assignment"""
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
     old_image = product.image
-    for key, value in payload.dict(exclude_unset=True).items():
-        setattr(product, key, value)
+
+    if name is not None:
+        product.name = name
+    if description is not None:
+        product.description = description
+    if price is not None:
+        product.price = price
+    if original_price is not None:
+        product.original_price = original_price
+    if stock_quantity is not None:
+        product.stock_quantity = stock_quantity
+    if is_featured is not None:
+        product.is_featured = is_featured
+    if on_sale is not None:
+        product.on_sale = on_sale
+    if is_active is not None:
+        product.is_active = is_active
+    
+    if category_id is not None:
+        category = db.query(Category).filter(Category.id == category_id).first()
+        if not category:
+            raise HTTPException(status_code=404, detail="Category not found")
+        product.category_id = category_id
+
+    if image:
+        if not image.content_type.startswith("image/"):
+            raise HTTPException(status_code=400, detail="File must be an image")
+        content = await image.read()
+        image_url = upload_image_to_cloudinary(content, image.filename, folder="ecommerce/products")
+        product.image = image_url
+        if old_image:
+            delete_file_if_exists(old_image)
 
     db.commit()
     db.refresh(product)
+    return {"detail": "Product updated", "product": product}
 
-    if payload.image and old_image and old_image != payload.image:
-        delete_file_if_exists(old_image)
-
-    return product
 
 # Delete product
 @router.delete("/{product_id}")
@@ -139,3 +182,46 @@ async def upload_image(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to upload image: {str(e)}")
 
+@router.post("/products/{product_id}/move", response_model=Dict[str, str])
+def move_product_to_category(
+    product_id: int,
+    new_category_id: int = Form(...),
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_current_admin_user)
+):
+    """Move a product to a different category"""
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    new_category = db.query(Category).filter(Category.id == new_category_id).first()
+    if not new_category:
+        raise HTTPException(status_code=404, detail="Target category not found")
+    
+    product.category_id = new_category_id
+    db.commit()
+    
+    return {"detail": f"Product moved to category '{new_category.name}'"}
+
+@router.post("/bulk/reorder", response_model=Dict[str, str])
+def reorder_categories(
+    orders: List[Dict[str, int]] = Body(...),  # [{"id": 1, "order": 0}, ...]
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_current_admin_user)
+):
+    """
+    Bulk update display order for categories
+    Expects: [{"id": category_id, "order": new_order}, ...]
+    """
+    try:
+        for item in orders:
+            category = db.query(Category).filter(Category.id == item["id"]).first()
+            if category:
+                # Assuming you add a display_order column to your Category model
+                category.display_order = item["order"]
+        
+        db.commit()
+        return {"detail": f"Reordered {len(orders)} categories successfully"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"Failed to reorder: {str(e)}")
