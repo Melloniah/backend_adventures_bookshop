@@ -23,13 +23,13 @@ async def lifespan(app: FastAPI):
     yield
     # Shutdown (cleanup if needed)
 
-# NOW CREATE APP WITH LIFESPAN
+# CREATE APP WITH LIFESPAN
 app = FastAPI(
     title="Adventures Bookshop API",
     redirect_slashes=False,
     docs_url="/docs" if ENVIRONMENT == "development" else None,
     redoc_url="/redoc" if ENVIRONMENT == "development" else None,
-    lifespan=lifespan,  # ADD THIS LINE!
+    lifespan=lifespan, 
 )
 
 # CORS configuration
