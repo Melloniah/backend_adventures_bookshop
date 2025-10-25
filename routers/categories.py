@@ -272,3 +272,33 @@ def get_category_breadcrumbs(
             current = None
     
     return breadcrumbs
+    @router.get("/slug/{slug}/breadcrumbs")
+def get_category_breadcrumbs_by_slug(
+    slug: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Get breadcrumb trail for a category using slug instead of ID.
+    Returns path from root to current category.
+    Example: /slug/books/grade-1 -> [Books, Grade 1 Books]
+    """
+    category = db.query(Category).filter(Category.slug == slug).first()
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+
+    breadcrumbs = []
+    current = category
+
+    # Walk up the hierarchy
+    while current:
+        breadcrumbs.insert(0, {
+            "id": current.id,
+            "name": current.name,
+            "slug": current.slug
+        })
+        if current.parent_id:
+            current = db.query(Category).filter(Category.id == current.parent_id).first()
+        else:
+            current = None
+
+    return breadcrumbs
