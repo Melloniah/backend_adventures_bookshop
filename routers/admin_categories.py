@@ -306,17 +306,12 @@ def get_category_products(
     return products
 
 
-@router.get("/stats", response_model=Dict[str, Any])
-def get_category_stats(
-    db: Session = Depends(get_db),
-    admin_user: User = Depends(get_current_admin_user)
-):
-    """Get category statistics"""
+def calculate_category_stats(db: Session) -> Dict[str, Any]:
     total_categories = db.query(Category).count()
     parent_categories = db.query(Category).filter(Category.parent_id == None).count()
     active_categories = db.query(Category).filter(Category.is_active == True).count()
     categories_with_products = db.query(Category).join(Product).distinct().count()
-    
+
     return {
         "total": total_categories,
         "parents": parent_categories,
@@ -324,8 +319,17 @@ def get_category_stats(
         "active": active_categories,
         "inactive": total_categories - active_categories,
         "with_products": categories_with_products,
-        "empty": total_categories - categories_with_products
+        "empty": total_categories - categories_with_products,
     }
+
+
+@router.get("/stats", response_model=Dict[str, Any])
+def get_category_stats(
+    db: Session = Depends(get_db),
+    admin_user = Depends(get_current_admin_user)
+):
+    return calculate_category_stats(db)
+       
 
 
 @router.post("/products/{product_id}/move", response_model=Dict[str, str])
