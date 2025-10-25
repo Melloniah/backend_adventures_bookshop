@@ -326,10 +326,10 @@ def calculate_category_stats(db: Session) -> Dict[str, Any]:
 @router.get("/stats", response_model=Dict[str, Any])
 def get_category_stats(
     db: Session = Depends(get_db),
-    admin_user = Depends(get_current_admin_user)
+    admin_user=Depends(get_current_admin_user)
 ):
     return calculate_category_stats(db)
-       
+
 
 
 @router.post("/products/{product_id}/move", response_model=Dict[str, str])

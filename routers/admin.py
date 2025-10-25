@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from database import get_db
-from models import User, Product, Order
+from models import User, Product, Order, Category
 from routers.auth import get_current_admin_user
 from routers.admin_categories import calculate_category_stats
 
@@ -19,10 +19,10 @@ def get_dashboard_stats(
     recent_orders = [
         {
             "id": o.id,
-            "customer_name": o.customer_name,
-            "customer_phone": o.customer_phone,
+            "customer_name": o.full_name,
+            "customer_phone": o.phone,
             "total_amount": o.total_amount,
-            "status": o.status,
+            "status": o.status.value if hasattr(o.status, "value") else o.status,
             "created_at": o.created_at,
         }
         for o in db.query(Order).order_by(Order.created_at.desc()).limit(5).all()
