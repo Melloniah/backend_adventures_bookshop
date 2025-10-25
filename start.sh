@@ -1,8 +1,12 @@
 #!/bin/bash
 set -e
 
-echo "Running Alembic migrations..."
-alembic upgrade head || echo "Alembic migration skipped"
+if ! alembic upgrade head; then
+  echo "⚠️ Alembic migration failed, skipping..."
+else
+  echo "✅ Alembic migrations applied successfully."
+fi
+
 
 echo "Seeding database..."
 python -c "from setup_database import seed_data; seed_data()" || echo "Seeding skipped"
