@@ -272,7 +272,8 @@ def get_category_breadcrumbs(
             current = None
     
     return breadcrumbs
-    @router.get("/slug/{slug}/breadcrumbs")
+    
+@router.get("/slug/{slug}/breadcrumbs")
 def get_category_breadcrumbs_by_slug(
     slug: str,
     db: Session = Depends(get_db)
