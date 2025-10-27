@@ -64,6 +64,7 @@ class CategoryCreate(BaseModel):
     slug: Optional[str] = None
     description: Optional[str] = None
     image: Optional[str] = None
+    icon: Optional[str] = None
     parent_id: Optional[int] = None
 
 
@@ -71,6 +72,7 @@ class CategoryUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     image: Optional[str] = None
+    icon: Optional[str] = None
     parent_id: Optional[int] = None
     is_active: Optional[bool] = None
 
@@ -82,6 +84,7 @@ class CategoryBase(BaseModel):
     slug: str
     description: Optional[str] = None
     image: Optional[str] = None
+    icon: Optional[str] = None
     is_active: bool
     parent_id: Optional[int] = None
     created_at: datetime
@@ -106,6 +109,7 @@ class CategoryTree(BaseModel):
     slug: str
     description: Optional[str]
     image: Optional[str]
+    icon: Optional[str] = None
     is_active: bool
     parent_id: Optional[int]
     subcategories: List["CategoryTree"] = []
