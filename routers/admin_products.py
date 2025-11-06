@@ -70,7 +70,7 @@ def search_products(
 async def create_product(
     name: str = Form(...),
     slug: str = Form(...),
-    description: str = Form(...),
+    description: str = Form(""),
     price: float = Form(...),
     original_price: float | None = Form(None),
     stock_quantity: int = Form(...),
@@ -124,8 +124,6 @@ async def create_product(
 
 
 # Update product
-from schemas import Product as ProductSchema
-
 @router.patch("/{product_id}", response_model=Dict[str, Any])
 async def update_product(
     product_id: int,
@@ -135,14 +133,19 @@ async def update_product(
     original_price: Optional[float] = Form(None),
     stock_quantity: Optional[int] = Form(None),
     category_id: Optional[int] = Form(None),
-    is_featured: Optional[bool] = Form(None),
-    on_sale: Optional[bool] = Form(None),
-    is_active: Optional[bool] = Form(None),
+    is_featured: Optional[str] = Form(None),  # ✅ Changed to str
+    on_sale: Optional[str] = Form(None),      # ✅ Changed to str
+    is_active: Optional[str] = Form(None),    # ✅ Changed to str
     image: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db),
     admin_user: User = Depends(get_current_admin_user)
 ):
     """Update product details including category assignment"""
+    
+    # ✅ Add the boolean conversion helper
+    def to_bool(val: str) -> bool:
+        return str(val).lower() in ["true", "1", "yes", "on"]
+    
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
@@ -161,11 +164,11 @@ async def update_product(
     if stock_quantity is not None:
         product.stock_quantity = stock_quantity
     if is_featured is not None:
-        product.is_featured = is_featured
+        product.is_featured = to_bool(is_featured)  # ✅ Convert to bool
     if on_sale is not None:
-        product.on_sale = on_sale
+        product.on_sale = to_bool(on_sale)  # ✅ Convert to bool
     if is_active is not None:
-        product.is_active = is_active
+        product.is_active = to_bool(is_active)  # ✅ Convert to bool
 
     # Category update
     if category_id is not None:
