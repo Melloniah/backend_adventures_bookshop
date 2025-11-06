@@ -66,22 +66,56 @@ def search_products(
         "current_page": page
     }
 
-
-# Create product
+#create product
 @router.post("", response_model=ProductSchema)
-def create_product(product: ProductCreate, db: Session = Depends(get_db), admin_user: User = Depends(get_current_admin_user)):
-    if db.query(Product).filter(Product.slug == product.slug).first():
+async def create_product(
+    name: str = Form(...),
+    slug: str = Form(...),
+    description: str = Form(...),
+    price: float = Form(...),
+    original_price: float | None = Form(None),
+    stock_quantity: int = Form(...),
+    category_id: int | None = Form(None),
+    is_active: bool = Form(...),
+    is_featured: bool = Form(...),
+    on_sale: bool = Form(...),
+    image: UploadFile | None = File(None),
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_current_admin_user),
+):
+    if db.query(Product).filter(Product.slug == slug).first():
         raise HTTPException(status_code=400, detail="Slug already exists")
 
-    db_product = Product(**product.dict(exclude_unset=True))
+    db_product = Product(
+        name=name,
+        slug=slug,
+        description=description,
+        price=price,
+        original_price=original_price,
+        stock_quantity=stock_quantity,
+        category_id=category_id,
+        is_active=is_active,
+        is_featured=is_featured,
+        on_sale=on_sale,
+    )
+
+    if image:
+        if not image.content_type.startswith("image/"):
+            raise HTTPException(status_code=400, detail="File must be an image")
+        content = await image.read()
+        image_url = upload_image_to_cloudinary(content, image.filename, folder="ecommerce/products")
+        db_product.image = image_url
+
     db.add(db_product)
     db.commit()
     db.refresh(db_product)
     return db_product
 
+
+
 # Update product
 
-@router.patch("/products/{product_id}", response_model=Dict[str, Any])
+@router.patch("/{product_id}", response_model=Dict[str, Any])
 async def update_product(
     product_id: int,
     name: Optional[str] = Form(None),
