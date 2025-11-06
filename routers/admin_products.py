@@ -66,7 +66,6 @@ def search_products(
         "current_page": page
     }
 
-#create product
 @router.post("", response_model=ProductSchema)
 async def create_product(
     name: str = Form(...),
@@ -76,16 +75,26 @@ async def create_product(
     original_price: float | None = Form(None),
     stock_quantity: int = Form(...),
     category_id: int | None = Form(None),
-    is_active: bool = Form(...),
-    is_featured: bool = Form(...),
-    on_sale: bool = Form(...),
+    is_active: str = Form(...),
+    is_featured: str = Form(...),
+    on_sale: str = Form(...),
     image: UploadFile | None = File(None),
     db: Session = Depends(get_db),
     admin_user: User = Depends(get_current_admin_user),
 ):
+    # convert string booleans to actual bools
+    def to_bool(val: str) -> bool:
+        return str(val).lower() in ["true", "1", "yes", "on"]
+
+    is_active = to_bool(is_active)
+    is_featured = to_bool(is_featured)
+    on_sale = to_bool(on_sale)
+
+    # check for duplicate slug
     if db.query(Product).filter(Product.slug == slug).first():
         raise HTTPException(status_code=400, detail="Slug already exists")
 
+    #  create new product
     db_product = Product(
         name=name,
         slug=slug,
@@ -99,6 +108,7 @@ async def create_product(
         on_sale=on_sale,
     )
 
+    # handle image upload
     if image:
         if not image.content_type.startswith("image/"):
             raise HTTPException(status_code=400, detail="File must be an image")
@@ -176,7 +186,7 @@ async def update_product(
 
     db.commit()
     db.refresh(product)
-    
+
     product_schema = ProductSchema.model_validate(product)
 
     return {"detail": "Product updated", "product": product_schema}
