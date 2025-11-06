@@ -114,6 +114,7 @@ async def create_product(
 
 
 # Update product
+from schemas import Product as ProductSchema
 
 @router.patch("/{product_id}", response_model=Dict[str, Any])
 async def update_product(
@@ -138,6 +139,7 @@ async def update_product(
 
     old_image = product.image
 
+    # Update fields
     if name is not None:
         product.name = name
     if description is not None:
@@ -154,13 +156,15 @@ async def update_product(
         product.on_sale = on_sale
     if is_active is not None:
         product.is_active = is_active
-    
+
+    # Category update
     if category_id is not None:
         category = db.query(Category).filter(Category.id == category_id).first()
         if not category:
             raise HTTPException(status_code=404, detail="Category not found")
         product.category_id = category_id
 
+    # Image handling
     if image:
         if not image.content_type.startswith("image/"):
             raise HTTPException(status_code=400, detail="File must be an image")
@@ -172,7 +176,10 @@ async def update_product(
 
     db.commit()
     db.refresh(product)
-    return {"detail": "Product updated", "product": product}
+    
+    product_schema = ProductSchema.model_validate(product)
+
+    return {"detail": "Product updated", "product": product_schema}
 
 
 # Delete product
