@@ -5,7 +5,7 @@ from typing import List, Dict, Any, Optional
 import uuid
 
 from database import get_db
-from models import Product, User
+from models import Category, Product, User
 from schemas import ProductCreate, ProductUpdate, Product as ProductSchema
 from routers.auth import get_current_admin_user
 from utils.delete_file import delete_file_if_exists
