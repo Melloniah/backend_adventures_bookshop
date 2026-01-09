@@ -274,7 +274,7 @@ class Order(BaseModel):
     id: int
     order_number: str
     full_name: str
-    email: EmailStr
+    email: Optional[EmailStr] = None
     phone: str
     location: Optional[str] = None
     estate: Optional[str] = None
